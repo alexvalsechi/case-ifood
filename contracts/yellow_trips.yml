@@ -21,6 +21,7 @@ fonte:
 destinos:
   bronze: case_ifood.bronze.yellow_trips
   silver: case_ifood.silver.yellow_trips
+  quarentena: case_ifood.governanca.quarantine_yellow_trips
 
 # Colunas originais usadas na deduplicacao (chave de negocio da corrida)
 chave_dedupe_origem: [VendorID, tpep_pickup_datetime, tpep_dropoff_datetime, PULocationID, DOLocationID]
@@ -94,7 +95,7 @@ regras_qualidade:
         expressao: passenger_count IS NULL OR passenger_count BETWEEN 0 AND 8
       - coluna: trip_distance
         expressao: trip_distance >= 0
-      # fora da janela SLA = invalida: descartada da silver (fica na bronze)
+      # fora da janela SLA = invalida: enviada à quarentena; a bronze é preservada
       - coluna: pickup_datetime
         expressao: pickup_datetime >= '2023-01-01' AND pickup_datetime < '2023-06-01'
   unicidade:

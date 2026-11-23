@@ -10,6 +10,7 @@ import os
 import yaml
 from pyspark import pipelines as dp
 from pyspark.sql import functions as F
+from pyspark.sql.window import Window
 
 CONTRACTS_DIR = "/Workspace/Users/alexvalsechibosque@gmail.com/case_ifood/contracts"
 
@@ -40,6 +41,57 @@ def _expectations_do_contrato(contrato):
     if "passenger_count" in contrato["colunas_obrigatorias"]:
         warns["obrigatoria_passenger_count"] = "passenger_count IS NOT NULL"
     return drops, warns
+
+
+def _mapear_para_silver(df, mapeamento, chave, taxi_type):
+    """Normaliza Bronze e conserva as colunas da origem para a quarentena."""
+    colunas_origem = [
+        F.col(c).alias(f"_orig_{c}")
+        for c in df.columns
+        if c not in ("_arquivo_origem", "_ingestao_ts")
+    ]
+    df = (
+        df.withColumn("trip_id", F.xxhash64(*[F.col(c).cast("string") for c in chave]))
+        .withColumn("taxi_type", F.lit(taxi_type))
+    )
+    selecionadas = []
+    for padrao, origem in mapeamento.items():
+        origens = origem if isinstance(origem, list) else [origem]
+        expressao = F.col(origens[0]) if len(origens) == 1 else F.coalesce(
+            *[F.col(o) for o in origens]
+        )
+        if "datetime" in padrao.lower():
+            expressao = expressao.cast("timestamp")
+        selecionadas.append(expressao.alias(padrao))
+    return df.select(
+        *selecionadas,
+        F.col("trip_id"),
+        F.col("taxi_type"),
+        *colunas_origem,
+        F.col("_arquivo_origem"),
+        F.col("_ingestao_ts"),
+    )
+
+
+def _com_motivos_rejeicao(df, regras_drop):
+    """Adiciona os nomes das regras DROP que cada linha viola."""
+    motivos = [
+        F.when(
+            ~F.coalesce(F.expr(expressao), F.lit(False)),
+            F.lit(nome),
+        )
+        for nome, expressao in regras_drop.items()
+    ]
+    return df.withColumn(
+        "motivos_rejeicao",
+        F.filter(F.array(*motivos), lambda motivo: motivo.isNotNull()),
+    )
+
+
+def _ordenar_deterministicamente_por_trip_id(df):
+    """Mantém a mesma linha em Silver e na classificação de duplicatas."""
+    ordem = [F.col(c).asc_nulls_last() for c in sorted(df.columns) if c != "trip_id"]
+    return F.row_number().over(Window.partitionBy("trip_id").orderBy(*ordem))
 
 
 # ---------------------------------------------------------------- bronze -----
@@ -100,54 +152,80 @@ for _contrato in CONTRATOS:
         )
 
 # ---------------------------------------------------------------- silver -----
-# Materialized view por dataset: mapeia colunas do contrato, gera trip_id
-# (hash da chave de dedupe), deduplica e aplica expectations do contrato.
+# Materialized views por dataset: Silver mantém dados conformes; quarentena
+# preserva linhas rejeitadas por regra e duplicatas removidas da Silver.
 for _contrato in CONTRATOS:
     _dataset = _contrato["dataset"]
     _nome_bronze = _contrato["destinos"]["bronze"]
     _nome_silver = _contrato["destinos"]["silver"]
+    _nome_quarentena = _contrato["destinos"]["quarentena"]
+    _nome_validacao = f"_{_dataset}_validacao"
     _mapeamento = _contrato["mapeamento_silver"]
     _chave = _contrato["chave_dedupe_origem"]
     _taxi_type = _contrato["taxi_type"]
     _drops, _warns = _expectations_do_contrato(_contrato)
     _comentario = _contrato["descricao"].strip()
 
-    def _criar_silver(contrato, nome_bronze, nome_silver, mapeamento, chave,
-                      taxi_type, drops, warns, comentario):
+    def _criar_silver_e_quarentena(nome_bronze, nome_silver, nome_quarentena,
+                                   nome_validacao, mapeamento, chave, taxi_type,
+                                   drops, warns, comentario):
+        @dp.materialized_view(
+            name=nome_validacao,
+            private=True,
+            comment=f"[privada] {comentario} Avalia regras do contrato e marca violações.",
+        )
+        @dp.expect_all(drops)
+        @dp.expect_all(warns)
+        def validacao():
+            return _com_motivos_rejeicao(
+                _mapear_para_silver(
+                    spark.read.table(nome_bronze), mapeamento, chave, taxi_type
+                ),
+                drops,
+            )
+
         @dp.materialized_view(
             name=nome_silver,
-            comment=f"[silver] {comentario} Deduplicado por trip_id; expectations do contrato.",
+            comment=f"[silver] {comentario} Conforme ao contrato e deduplicado por trip_id.",
             cluster_by_auto=True,
         )
-        @dp.expect_all_or_drop(drops)
-        @dp.expect_all(warns)
         def silver():
-            df = spark.read.table(nome_bronze)
-            # trip_id calculado sobre as colunas ORIGINAIS (antes do mapeamento)
-            hash_cols = [F.col(c).cast("string") for c in chave]
-            df = (
-                df.withColumn("trip_id", F.xxhash64(*hash_cols))
-                .withColumn("taxi_type", F.lit(taxi_type))
-            )
-            selecionadas = []
-            for padrao, origem in mapeamento.items():
-                origens = origem if isinstance(origem, list) else [origem]
-                if len(origens) == 1:
-                    expressao = F.col(origens[0])
-                else:
-                    expressao = F.coalesce(*[F.col(o) for o in origens])
-                if "datetime" in padrao.lower():
-                    expressao = expressao.cast("timestamp")
-                selecionadas.append(expressao.alias(padrao))
+            df = spark.read.table(nome_validacao).filter(F.size("motivos_rejeicao") == 0)
+            # A ordenação torna explícito qual duplicata permanece, e permite
+            # que a outra seja registrada na tabela de quarentena.
             return (
-                df.select(*selecionadas, F.col("trip_id"), F.col("taxi_type"))
-                .dropDuplicates(["trip_id"])
+                df.withColumn("_ordem_trip_id", _ordenar_deterministicamente_por_trip_id(df))
+                .filter(F.col("_ordem_trip_id") == 1)
+                .drop("_ordem_trip_id", "_arquivo_origem", "_ingestao_ts")
+                .select(*mapeamento.keys(), "trip_id", "taxi_type")
             )
 
-        return silver
+        @dp.materialized_view(
+            name=nome_quarentena,
+            comment=f"[quarentena] {comentario} Linhas rejeitadas e duplicatas da Silver.",
+            cluster_by_auto=True,
+        )
+        def quarentena():
+            df = spark.read.table(nome_validacao)
+            rejeitadas = df.filter(F.size("motivos_rejeicao") > 0)
+            conformes = df.filter(F.size("motivos_rejeicao") == 0)
 
-    _criar_silver(_contrato, _nome_bronze, _nome_silver, _mapeamento, _chave,
-                  _taxi_type, _drops, _warns, _comentario)
+            duplicadas = (
+                conformes
+                .withColumn("_ordem_trip_id", _ordenar_deterministicamente_por_trip_id(conformes))
+                .filter(F.col("_ordem_trip_id") > 1)
+                .withColumn("motivos_rejeicao", F.array(F.lit("duplicidade_trip_id")))
+                .drop("_ordem_trip_id")
+            )
+            return (
+                rejeitadas.unionByName(duplicadas)
+                .withColumn("quarentena_ts", F.current_timestamp())
+            )
+
+    _criar_silver_e_quarentena(
+        _nome_bronze, _nome_silver, _nome_quarentena, _nome_validacao,
+        _mapeamento, _chave, _taxi_type, _drops, _warns, _comentario,
+    )
 
 # ------------------------------------------------------------------ gold -----
 # Visões de consumo geradas a partir dos contratos de gold em contracts/gold/:

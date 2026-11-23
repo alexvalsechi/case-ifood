@@ -36,14 +36,14 @@ Referências vivas: `contracts/yellow_trips.yml` e `contracts/green_trips.yml`. 
 | `fonte.volume` | Volume UC de landing | Hoje `/Volumes/case_ifood/landing/files` |
 | `fonte.glob` | Padrão de arquivos a ingerir | Ex.: `yellow_tripdata_2023-*.parquet`; um append flow por arquivo casado |
 | `fonte.formato` | Formato de leitura | `parquet` (único suportado no motor atual) |
-| `destinos.bronze` / `destinos.silver` | Nomes completos das tabelas geradas | `case_ifood.bronze.<dataset>` / `case_ifood.silver.<dataset>` |
+| `destinos.bronze` / `destinos.silver` / `destinos.quarentena` | Nomes completos das tabelas geradas | `case_ifood.bronze.<dataset>` / `case_ifood.silver.<dataset>` / `case_ifood.governanca.quarantine_<dataset>` |
 | `chave_dedupe_origem` | Colunas ORIGINAIS (nomes da bronze) que formam a chave de dedupe | Viram o hash `trip_id` (xxhash64) na silver |
 | `mapeamento_silver` | Dicionário `nome_silver -> coluna_bronze` (ou lista, para coalesce) | Colunas fora do mapa são descartadas; nomes contendo `datetime` recebem cast automático para timestamp |
 | `schema_bronze` | Dicionário `coluna -> tipo Spark` | Cada arquivo é lido com o próprio schema físico e normalizado via cast (int/bigint/double e capitalização variam entre arquivos mensais) |
-| `colunas_obrigatorias` | Colunas de consumo exigidas | Viram expectations `IS NOT NULL` (drop), exceto `passenger_count` (warn) |
-| `regras_qualidade.validade` | Lista `{coluna, expressao}` | Expressões SQL avaliadas sobre nomes **SILVER** (pós-mapeamento); falha = linha descartada da silver (fica na bronze) |
-| `regras_qualidade.consistencia` | Lista de expressões | Idem validade (ex.: `dropoff_datetime >= pickup_datetime`) |
-| `regras_qualidade.completude` / `pontualidade` / `unicidade` | Documentação DAMA-DMBOK | **Ainda não enforcementadas** pelo pipeline (unicidade é garantida na prática pelo `dropDuplicates(trip_id)`); servem aos motores de qualidade/observabilidade |
+| `colunas_obrigatorias` | Colunas de consumo exigidas | `IS NOT NULL` é avaliado como regra de rejeição e enviado à quarentena, exceto `passenger_count` (warn, mantido) |
+| `regras_qualidade.validade` | Lista `{coluna, expressao}` | Expressões SQL avaliadas sobre nomes **SILVER** (pós-mapeamento); falha = linha desviada para `destinos.quarentena` e mantida na bronze |
+| `regras_qualidade.consistencia` | Lista de expressões | Idem validade (ex.: `dropoff_datetime >= pickup_datetime`); motivo é registrado em `motivos_rejeicao` |
+| `regras_qualidade.completude` / `pontualidade` / `unicidade` | Documentação DAMA-DMBOK | Completude e pontualidade são auditadas depois; a unicidade é aplicada na Silver por `trip_id`, com as duplicatas excedentes enviadas à quarentena |
 | `colunas_pii` / `tags` | Segurança e metadados | Alimentam os motores de segurança/governança |
 
 ## 3. Contrato de gold (`contracts/gold/*.yml`)
@@ -111,10 +111,11 @@ Depois: montar o YAML, **mostrar ao usuário e confirmar**, e só então executa
 
 * **Ordem de `membros` define o schema do consolidado**: hoje `[green_trips, yellow_trips]` — o layout segue o green e `airport_fee` fica por último. Mudar a ordem muda a ordem (não o conteúdo) das colunas.
 * `passenger_count` é nulo em ~2,7% das corridas (não registrado pelos motoristas) — por isso é expectation **warn**, não drop. Agregações de média o ignoram (comportamento SQL padrão).
-* Janela de validade SLA: corridas fora de `2023-01-01` a `2023-06-01` são **descartadas da silver** (permanecem na bronze) — expectativas de `pickup_datetime` nos contratos.
+* Janela de validade SLA: corridas fora de `2023-01-01` a `2023-06-01` vão para `destinos.quarentena` e permanecem na bronze — regra de `pickup_datetime` nos contratos.
 * **Expressões de `regras_qualidade` usam nomes SILVER** (pós-`mapeamento_silver`), nunca os nomes originais da fonte (ex.: `tpep_pickup_datetime` vira `pickup_datetime`).
 * Agregados leem apenas o consolidado do próprio contrato — não apontam para silver, nem para consolidado de outro contrato.
 * `mapeamento_silver` com lista = coalesce na ordem (usado para variantes de capitalização na bronze, ex.: `Airport_fee`/`airport_fee`).
+* Uma MV privada avalia `expect_all` para conservar métricas de regras no event log e adiciona `motivos_rejeicao`. Linhas rejeitadas e duplicatas válidas excedentes por `trip_id` são materializadas em `destinos.quarentena`; inclui campos Silver mapeados, campos originais da Bronze prefixados `_orig_`, `_arquivo_origem`, `_ingestao_ts` e `quarentena_ts`. WARNs, como `passenger_count` nulo, não são rejeitados. Para reprocessar após corrigir uma regra, atualize/reexecute o pipeline a partir da Bronze.
 
 ## 8. Exemplo ponta a ponta — "visão que agrupa corridas por localidade"
 

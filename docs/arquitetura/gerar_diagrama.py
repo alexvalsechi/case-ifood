@@ -265,14 +265,14 @@ def create():
     silver = Card(c,2258,790,610,790,"05","Silver",C["silver"],C["silver_bg"])
     silver.p("silver.green_trips\nsilver.yellow_trips",29,style="mono",line=39,gap=9)
     silver.p("_criar_silver()\n@dp.materialized_view",25,style="mono",line=34,gap=9)
-    silver.p("xxhash64(chave original) → trip_id; mapeamento, timestamps e taxi_type; dropDuplicates(trip_id).",25,line=35,gap=12)
+    silver.p("xxhash64(chave original) → trip_id; mapeamento, timestamps e taxi_type; dedupe determinístico.",25,line=35,gap=12)
     silver.rule()
-    silver.p("_expectations_do_contrato()",24,C["silver"],"mono",line=33,gap=9)
-    silver.label("DROP · expect_all_or_drop",C["red"],23)
-    silver.p("Obrigatórias: vendor, total, pickup e dropoff. Validade + consistência; pickup de 01/jan a 01/jun/2023 (fim exclusivo).",25,line=35,gap=13)
+    silver.p("MV privada · @dp.expect_all",24,C["silver"],"mono",line=33,gap=9)
+    silver.label("DROP · regras + duplicatas → quarentena",C["red"],23)
+    silver.p("governanca.quarantine_<dataset>: motivos, colunas originais e lineage para reprocessamento.",24,line=33,gap=10)
+    silver.p("Obrigatórias + validade + consistência; pickup na janela de jan–mai/2023.",24,line=33,gap=10)
     silver.label("WARN · expect_all",C["silver"],23)
     silver.p("passenger_count nulo: registro mantido. Faixa válida: NULL ou 0–8.",25,line=35,gap=11)
-    silver.p("cluster_by_auto=True",25,C["muted"],"mono",line=34)
 
     gc = Card(c,2926,790,610,790,"06","Gold",C["gold"],C["gold_bg"])
     gc.p("gold.trips_consolidado",29,style="mono",line=39,gap=7)
@@ -322,7 +322,7 @@ def create():
     c.text(64,2350,"LIMITES DA REPRESENTAÇÃO",25,C["muted"],"bold")
     notes = [
         (64,1114,"Orquestração e consumo", "O Job de ingestão → pipeline → qualidade → observabilidade → segurança é descrito no README; sua definição não está no repo. 04/05/06 também estão ausentes. SQL/BI é consumo previsto."),
-        (1210,1114,"Rastreabilidade e segurança", "_arquivo_origem e _ingestao_ts permanecem apenas na bronze. owner, domínio, tags e PII são declarados nos YAML; aplicação de GRANTs e tags não foi localizada."),
+        (1210,1114,"Rastreabilidade e segurança", "_arquivo_origem e _ingestao_ts são preservados na quarentena. owner, domínio, tags e PII são declarados nos YAML; aplicação de GRANTs e tags não foi localizada."),
         (2356,1180,"Semântica que importa", "Deduplicação por dataset na silver; a gold apenas une. Janela contratual fixa em jan–mai/2023. soma_distancia_km soma trip_distance sem conversão de unidade no código; médias ignoram NULL."),
     ]
     for x,w,title,body in notes:

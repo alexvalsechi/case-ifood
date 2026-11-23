@@ -21,6 +21,7 @@ fonte:
 destinos:
   bronze: case_ifood.bronze.green_trips
   silver: case_ifood.silver.green_trips
+  quarentena: case_ifood.governanca.quarantine_green_trips
 
 chave_dedupe_origem: [VendorID, lpep_pickup_datetime, lpep_dropoff_datetime, PULocationID, DOLocationID]
 
@@ -91,7 +92,7 @@ regras_qualidade:
         expressao: passenger_count IS NULL OR passenger_count BETWEEN 0 AND 8
       - coluna: trip_distance
         expressao: trip_distance >= 0
-      # fora da janela SLA = invalida: descartada da silver (fica na bronze)
+      # fora da janela SLA = invalida: enviada à quarentena; a bronze é preservada
       - coluna: pickup_datetime
         expressao: pickup_datetime >= '2023-01-01' AND pickup_datetime < '2023-06-01'
   unicidade:
