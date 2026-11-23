@@ -125,9 +125,13 @@ O notebook [`consultas_gold.ipynb`](analysis/consultas_gold.ipynb) responde às 
 
 ## 3. Arquitetura detalhada
 
-![Visão detalhada das etapas, dos motivos de uso e dos controles de dados](docs/arquitetura/arquitetura-detalhada.png)
+A imagem mostra os componentes implementados e suas conexões. Leia as origens à esquerda, o processamento no centro e a consulta SQL à direita. A faixa superior identifica a publicação pelo DAB e a sequência dos jobs; corridas e referências têm caminhos separados até a Gold.
+
+![Fluxo detalhado com ícones e setas: GitHub e DAB, bootstrap, origens TLC, downloads, volumes, Bronze, validação, Silver, quarentena, dimensões, Gold, SQL, auditoria e observabilidade](docs/arquitetura/arquitetura-detalhada.png)
 
 [PNG](docs/arquitetura/arquitetura-detalhada.png) · [SVG editável](docs/arquitetura/arquitetura-detalhada.svg) · [Gerador dos diagramas](docs/arquitetura/gerar_arquiteturas.py)
+
+As setas identificam dados, configuração/chamadas manuais, dependências entre tasks, métricas/logs e rejeições. Os nomes de tabelas na imagem omitem apenas o catálogo `case_ifood`. O notebook de consumo lê `gold.trips_consolidado`; `gold.trips_diario` é uma saída adicional. Os nomes de objetos e os hashes das fontes são incorporados ao PNG e ao SVG a partir dos contratos e resources versionados.
 
 | Etapa | Finalidade | Validações e comportamento |
 | --- | --- | --- |
@@ -254,7 +258,7 @@ case-ifood/
 └── requirements-dev.txt
 ```
 
-Para gerar novamente os dois diagramas de arquitetura, com Pillow disponível:
+Para gerar novamente os dois diagramas de arquitetura, com Pillow e PyYAML disponíveis:
 
 ```powershell
 python docs/arquitetura/gerar_arquiteturas.py

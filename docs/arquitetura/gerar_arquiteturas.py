@@ -7,11 +7,12 @@ Dependência: Pillow. SVG e PNG compartilham o mesmo desenho e conteúdo.
 from __future__ import annotations
 
 import html
+import json
 import math
 import os
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, PngImagePlugin
 
 
 OUT = Path(__file__).resolve().parent
@@ -37,9 +38,9 @@ def font_path(bold=False):
 
 
 class Canvas:
-    def __init__(self, height):
-        self.width, self.height = WIDTH, height
-        self.image = Image.new("RGB", (WIDTH, height), COLORS["bg"])
+    def __init__(self, height, width=WIDTH):
+        self.width, self.height = width, height
+        self.image = Image.new("RGB", (width, height), COLORS["bg"])
         self.draw = ImageDraw.Draw(self.image)
         self.svg = []
         self.fonts = {}
@@ -110,13 +111,21 @@ class Canvas:
             y += leading
         return y
 
-    def save(self, stem, title, description):
-        self.image.save(OUT / f"{stem}.png", optimize=True)
+    def save(self, stem, title, description, metadata=None):
+        if metadata:
+            info = PngImagePlugin.PngInfo()
+            info.add_text("Description", description)
+            info.add_text("Source provenance", json.dumps(metadata, ensure_ascii=False))
+            self.image.save(OUT / f"{stem}.png", optimize=True, pnginfo=info)
+        else:
+            self.image.save(OUT / f"{stem}.png", optimize=True)
         svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{self.width}" '
                f'height="{self.height}" viewBox="0 0 {self.width} {self.height}" '
                f'role="img" aria-labelledby="title desc">'
                f'<title id="title">{html.escape(title)}</title>'
                f'<desc id="desc">{html.escape(description)}</desc>'
+               + (f'<metadata>{html.escape(json.dumps(metadata, ensure_ascii=False))}</metadata>' if metadata else "")
+               +
                f'<rect width="100%" height="100%" fill="{COLORS["bg"]}"/>'
                + "".join(self.svg) + "</svg>\n")
         (OUT / f"{stem}.svg").write_text(svg, encoding="utf-8")
@@ -173,76 +182,10 @@ def general():
            "DAB publica pipeline e Jobs; bootstrap cria o ambiente e baixa fontes TLC; pipeline lê landing, materializa Bronze e Silver, enriquece Gold e permite consulta SQL. Auditoria e observabilidade executam após a materialização.")
 
 
-def stage(c, y, number, title, color, purpose, checks, tag=None):
-    """Etapa com duas colunas largas e altura calculada pelo texto real."""
-    x, w = 112, 1272
-    content_y = y+109
-    left_width, right_width = 552, 580
-    left_lines = c.wrap(purpose, left_width, 24)
-    right_lines = c.wrap(checks, right_width, 24)
-    body_height = max(len(left_lines), len(right_lines))*34
-    height = 135+body_height
-    c.rect(x, y, w, height, COLORS["white"], COLORS["line"])
-    c.rect(x+20, y+18, w-40, 54, COLORS[f"{color}_bg"], radius=11)
-    c.text(x+36, y+24, title, 29, COLORS[color], True)
-    if tag:
-        # Uma legenda curta ocupa a extremidade direita da faixa do título.
-        tag_w = c.font(20, True).getlength(tag)
-        c.text(x+w-38-tag_w, y+33, tag, 20, COLORS[color], True)
-    c.text(x+28, y+83, "POR QUE / O QUE FAZ", 17, COLORS["muted"], True)
-    c.text(x+643, y+83, "VALIDAÇÕES / COMPORTAMENTO", 17, COLORS["muted"], True)
-    c.path([(x+615, y+87), (x+615, y+height-24)], COLORS["line"], width=2)
-    c.paragraph(x+28, content_y, purpose, left_width, 24, leading=34)
-    c.paragraph(x+643, content_y, checks, right_width, 24, leading=34)
-    c.rect(35, y+20, 55, 55, COLORS[f"{color}_bg"], radius=16)
-    c.text(47, y+29, number, 25, COLORS[color], True)
-    c.path([(62, y+75), (62, y+height+21)], COLORS["line"], arrow=True, width=3)
-    return y+height+33
-
-
 def detailed():
-    stages = [
-        ("01", "Versionamento e publicação com DAB", "teal",
-         "Git versiona código, contratos YAML e recursos. O bundle publica o pipeline SDP e os Jobs de bootstrap e operação no workspace.",
-         "GitHub Actions executa 16 testes Python; validação DAB é condicional aos secrets. O workflow não faz deploy nem executa Spark.", None),
-        ("02", "Bootstrap e leitura das fontes TLC", "teal",
-         "Cria catálogo, schemas, volumes e governança. Baixa Yellow/Green (jan–mai/2023) e o CSV Taxi Zones; o pipeline passa a ler a landing.",
-         "CREATE IF NOT EXISTS; pula Parquet existente e não vazio. Registra status/checksum. Confere cabeçalho do CSV e salva snapshot com manifesto.", "SOB DEMANDA"),
-        ("03", "Bronze · rastreabilidade da origem", "bronze",
-         "Lê cada Parquet com o schema físico do arquivo e converte para o schema canônico do contrato. Mantém os dados para investigação e reprocessamento.",
-         "Normaliza tipos e capitalização; colunas ausentes viram NULL. Acrescenta _arquivo_origem e _ingestao_ts. Regras de negócio são aplicadas na Silver.", None),
-        ("04", "Silver · conformidade e deduplicação", "silver",
-         "Padroniza nomes e datas; cria trip_id e taxi_type. Expectations registram métricas. Mantém uma linha conforme por trip_id; violações e duplicatas excedentes vão à quarentena com motivo e origem.",
-         "Obrigatórias críticas não nulas; valor e distância ≥ 0; passageiros NULL ou 0–8; pickup de 01/jan a antes de 01/jun/2023; dropoff ≥ pickup. Passageiros NULL: WARN, mantém a linha.", None),
-        ("05", "Referências · códigos com significado", "silver",
-         "Materializa cinco dimensões em Bronze/Silver: vendor, rate_code, payment_type, trip_type e taxi_zone. Quatro vêm do YAML e uma do CSV oficial.",
-         "Aplica os tipos do contrato e deduplica pela chave da dimensão. O lookup externo teve seu cabeçalho verificado no bootstrap. Essas referências enriquecem a Gold.", "EM PARALELO"),
-        ("06", "Gold · dados prontos para análise", "gold",
-         "Une Yellow + Green em trips_consolidado. Faz seis LEFT JOINs com cinco dimensões (zonas usadas duas vezes). trips_diario agrega contagem e médias por dia/tipo.",
-         "Na carga, valida membros, dimensões e funções de agregação declaradas. LEFT JOIN preserva as corridas e as chaves; referência não encontrada resulta em descrição NULL.", None),
-        ("07", "Auditoria de qualidade · após o pipeline", "purple",
-         "Audita as Silvers em cinco dimensões DAMA: completude, validade, unicidade, consistência e pontualidade. Grava métricas e exemplos em governanca.dq_resultados.",
-         "24 verificações (12 por dataset). Qualquer FAIL interrompe o Job após registrar o relatório. A Gold já foi materializada; a auditoria não desfaz nem impede essa publicação.", None),
-        ("08", "Observabilidade · saúde e histórico", "purple",
-         "Lê as tabelas declaradas nos contratos e o event log do SDP. Registra volume, tempo desde a última escrita e resultados das expectations em governanca.obs_metricas.",
-         "Sinaliza tabelas vazias/ausentes e expectations reprovadas, sem gate por métrica. Erros técnicos podem falhar a tarefa. Depende do sucesso da auditoria de qualidade.", None),
-    ]
-    # O mesmo cálculo de quebra de linhas determina a altura final do canvas.
-    probe = Canvas(100)
-    heights = [135+max(len(probe.wrap(s[3], 552)), len(probe.wrap(s[4], 580)))*34+33
-               for s in stages]
-    height = 224+sum(heights)+221
-    c = Canvas(height)
-    header(c, "Etapas, propósito e validações", "Visão detalhada · leia de cima para baixo; as dimensões são uma ramificação do pipeline")
-    y = 224
-    for number, title, color, purpose, checks, tag in stages:
-        y = stage(c, y, number, title, color, purpose, checks, tag)
-    c.rect(112, y+3, 1272, 132, COLORS["gold_bg"], radius=18)
-    c.text(140, y+22, "Consumo · SQL / notebook de respostas", 30, COLORS["gold"], True)
-    c.text(140, y+70, "Gold disponível: trips_consolidado e trips_diario. Notebook consulta o consolidado.", 24)
-    c.text(56, y+174, "Pré-requisitos e sequência de execução estão documentados no README.", 22, COLORS["muted"])
-    c.save("arquitetura-detalhada", "Arquitetura detalhada: etapas, propósito e validações",
-           "Oito etapas descrevem versionamento e DAB, bootstrap, Bronze, Silver e quarentena, cinco dimensões de referência, Gold enriquecida por seis LEFT JOINs, auditoria DAMA após materialização e observabilidade. Consumo SQL consulta a Gold; a auditoria posterior não é uma barreira antes de materializar a Gold.")
+    from gerar_fluxo_detalhado import generate
+
+    generate(Canvas)
 
 
 if __name__ == "__main__":
