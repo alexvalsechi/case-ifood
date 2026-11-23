@@ -18,7 +18,11 @@ def atualizar(dbutils):
     requisicao = Request(URL, headers={"User-Agent": "case-ifood-reference-ingestion/1.0"})
     with urlopen(requisicao, timeout=60) as resposta:
         conteudo = resposta.read()
-    if not conteudo.startswith(b"LocationID,Borough,Zone,service_zone"):
+    # O CSV oficial pode vir com o cabeçalho entre aspas; normalizar antes de validar
+    cabecalho = (
+        conteudo.split(b"\r\n", 1)[0].split(b"\n", 1)[0].replace(b'"', b"")
+    )
+    if not cabecalho.startswith(b"LocationID,Borough,Zone,service_zone"):
         raise ValueError("O CSV recebido não corresponde ao schema esperado da TLC.")
 
     dbutils.fs.mkdirs("/Volumes/case_ifood/landing/reference")

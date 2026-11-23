@@ -274,7 +274,7 @@ for _ref in CONTRATOS_REFERENCIA:
                     .csv(ref["fonte"]["path"])
                 )
             linhas = ref["fonte"]["linhas"]
-            schema = " ".join(f"`{c['nome']}` {c['tipo']}" for c in colunas)
+            schema = ", ".join(f"`{c['nome']}` {c['tipo']}" for c in colunas)
             return spark.createDataFrame(linhas, schema=schema)
 
         @dp.materialized_view(
