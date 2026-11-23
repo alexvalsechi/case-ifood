@@ -3,6 +3,8 @@
 #   2) motor de qualidade DAMA sobre as silvers
 #      → grava os relatórios em case_ifood.governanca.dq_resultados
 #      (FAIL crítico interrompe o job — é o gate de qualidade do projeto)
+#   3) motor de observabilidade → grava em case_ifood.governanca.obs_metricas
+#      (registra e reporta; não interrompe o job)
 resources:
   jobs:
     case_ifood_update_e_qualidade:
@@ -19,3 +21,11 @@ resources:
             base_parameters:
               catalogo: case_ifood
               datasets: ""
+        - task_key: observabilidade_contratos
+          depends_on:
+            - task_key: qualidade_contratos
+          notebook_task:
+            notebook_path: 04_observabilidade/observabilidade_contratos
+            base_parameters:
+              catalogo: case_ifood
+              pipeline_id: ${resources.pipelines.case_ifood_medallion.id}
