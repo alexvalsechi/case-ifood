@@ -4,7 +4,7 @@
 #      → grava os relatórios em case_ifood.governanca.dq_resultados
 #      (FAIL crítico interrompe o job — é o gate de qualidade do projeto)
 #   3) motor de observabilidade → grava em case_ifood.governanca.obs_metricas
-#      (registra e reporta; não interrompe o job)
+#      (métricas sinalizam atenção; falhas técnicas da task propagam ao job)
 resources:
   jobs:
     case_ifood_update_e_qualidade:
@@ -16,16 +16,26 @@ resources:
         - task_key: qualidade_contratos
           depends_on:
             - task_key: pipeline_update
+          environment_key: default
           notebook_task:
-            notebook_path: 03_qualidade/qualidade_contratos
+            notebook_path: ../03_qualidade/qualidade_contratos.ipynb
             base_parameters:
               catalogo: case_ifood
               datasets: ""
         - task_key: observabilidade_contratos
           depends_on:
             - task_key: qualidade_contratos
+          environment_key: default
           notebook_task:
-            notebook_path: 04_observabilidade/observabilidade_contratos
+            notebook_path: ../04_observabilidade/observabilidade_contratos.ipynb
             base_parameters:
               catalogo: case_ifood
               pipeline_id: ${resources.pipelines.case_ifood_medallion.id}
+
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "4"
+            dependencies:
+              - PyYAML>=6.0
+              - requests>=2.31

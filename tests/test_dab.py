@@ -1,7 +1,8 @@
 """Valida a estrutura do DAB (databricks.yml + resources) sem precisar do CLI.
 
 Garante que o bundle parseia, tem os targets dev/prod esperados e que todo
-caminho referenciado (biblioteca do pipeline, notebook do job) existe no repo.
+caminho referenciado (biblioteca do pipeline, notebook do job), relativo ao
+YAML resource que o declara, existe no repo.
 """
 import glob
 import os
@@ -34,13 +35,12 @@ def test_resources_sao_yaml_validos_com_caminhos_existentes():
                 "pipeline sem a configuração case_ifood.contracts_dir (portabilidade)"
             )
             for lib in pipeline.get("libraries", []):
-                alvo = os.path.join(RAIZ, lib["file"]["path"])
+                alvo = os.path.normpath(os.path.join(os.path.dirname(caminho), lib["file"]["path"]))
                 assert os.path.isfile(alvo), f"biblioteca inexistente: {alvo}"
         for job in doc.get("resources", {}).get("jobs", {}).values():
             for task in job.get("tasks", []):
                 notebook = task.get("notebook_task", {}).get("notebook_path")
                 if notebook:
-                    # notebook no repo: sem extensão (workspace) ou .ipynb (fonte)
-                    sem_ext = os.path.join(RAIZ, notebook)
-                    existe = os.path.exists(sem_ext) or os.path.exists(sem_ext + ".ipynb")
-                    assert existe, f"notebook do job inexistente: {notebook}"
+                    # DAB resolve cada caminho relativo à pasta do YAML resource.
+                    alvo = os.path.normpath(os.path.join(os.path.dirname(caminho), notebook))
+                    assert os.path.isfile(alvo), f"notebook do job inexistente: {alvo}"

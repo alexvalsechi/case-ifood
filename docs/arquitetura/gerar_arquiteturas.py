@@ -168,7 +168,7 @@ def general():
     c.text(78, 1007, "Depois da materialização: auditoria de qualidade → observabilidade", 28, COLORS["purple"], True)
     c.text(78, 1051, "O Job operacional atualiza o pipeline, audita a Silver e registra métricas de execução.", 24)
     c.text(78, 1088, "FAIL na auditoria interrompe o Job; a Gold já foi materializada nessa atualização.", 23, COLORS["muted"])
-    c.text(56, 1163, "Requer configuração inicial do workspace; ver guia no README. Execução remota não verificada.", 22, COLORS["muted"])
+    c.text(56, 1163, "Pré-requisitos e sequência de execução estão documentados no README.", 22, COLORS["muted"])
     c.save("arquitetura-visao-geral", "Arquitetura: da configuração à consulta",
            "DAB publica pipeline e Jobs; bootstrap cria o ambiente e baixa fontes TLC; pipeline lê landing, materializa Bronze e Silver, enriquece Gold e permite consulta SQL. Auditoria e observabilidade executam após a materialização.")
 
@@ -240,7 +240,7 @@ def detailed():
     c.rect(112, y+3, 1272, 132, COLORS["gold_bg"], radius=18)
     c.text(140, y+22, "Consumo · SQL / notebook de respostas", 30, COLORS["gold"], True)
     c.text(140, y+70, "Gold disponível: trips_consolidado e trips_diario. Notebook consulta o consolidado.", 24)
-    c.text(56, y+174, "Requer configuração inicial do workspace; ver guia no README. Execução remota não verificada.", 22, COLORS["muted"])
+    c.text(56, y+174, "Pré-requisitos e sequência de execução estão documentados no README.", 22, COLORS["muted"])
     c.save("arquitetura-detalhada", "Arquitetura detalhada: etapas, propósito e validações",
            "Oito etapas descrevem versionamento e DAB, bootstrap, Bronze, Silver e quarentena, cinco dimensões de referência, Gold enriquecida por seis LEFT JOINs, auditoria DAMA após materialização e observabilidade. Consumo SQL consulta a Gold; a auditoria posterior não é uma barreira antes de materializar a Gold.")
 

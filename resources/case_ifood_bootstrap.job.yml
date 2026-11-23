@@ -10,9 +10,19 @@ resources:
       name: case_ifood_bootstrap
       tasks:
         - task_key: bootstrap_ambiente
+          environment_key: default
           notebook_task:
-            notebook_path: 01_ingestao/bootstrap_ambiente
+            notebook_path: ../01_ingestao/bootstrap_ambiente.ipynb
             base_parameters:
               catalogo: case_ifood
               ano: "2023"
               meses: "01,02,03,04,05"
+
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "4"
+            dependencies:
+              - PyYAML>=6.0
+              - requests>=2.31
+              - pandas>=2.0

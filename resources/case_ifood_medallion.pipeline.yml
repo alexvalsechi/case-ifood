@@ -20,6 +20,9 @@ resources:
         case: ifood
         dominio: mobilidade_urbana
         padrao: medallion
+      environment:
+        dependencies:
+          - PyYAML>=6.0
       libraries:
         - file:
-            path: 02_pipelines/pipeline_case_ifood.py
+            path: ../02_pipelines/pipeline_case_ifood.py
