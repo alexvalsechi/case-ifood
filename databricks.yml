@@ -1,0 +1,28 @@
+# =============================================================================
+# Declarative Automation Bundle (DAB) — case_ifood (medallion orientado a contratos)
+# Fonte única do projeto: este repo (branch main). Regras do projeto: ver SDD.md.
+#
+# Deploy:
+#   databricks bundle deploy -t dev    # desenvolvimento (development: true)
+#   databricks bundle deploy -t prod   # produção (development: false)
+# =============================================================================
+bundle:
+  name: case-ifood
+
+include:
+  - resources/*.yml
+
+targets:
+  dev:
+    mode: development
+    default: true
+    resources:
+      pipelines:
+        case_ifood_medallion:
+          development: true
+  prod:
+    mode: production
+    resources:
+      pipelines:
+        case_ifood_medallion:
+          development: false

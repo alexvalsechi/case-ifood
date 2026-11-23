@@ -1,0 +1,21 @@
+# Job operacional do case (fluxo do SDD, seção 6):
+#   1) update do pipeline SDP (normal — nunca full refresh por padrão)
+#   2) motor de qualidade DAMA sobre as silvers
+#      → grava os relatórios em case_ifood.governanca.dq_resultados
+#      (FAIL crítico interrompe o job — é o gate de qualidade do projeto)
+resources:
+  jobs:
+    case_ifood_update_e_qualidade:
+      name: case_ifood_update_e_qualidade
+      tasks:
+        - task_key: pipeline_update
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.case_ifood_medallion.id}
+        - task_key: qualidade_contratos
+          depends_on:
+            - task_key: pipeline_update
+          notebook_task:
+            notebook_path: 03_qualidade/qualidade_contratos
+            base_parameters:
+              catalogo: case_ifood
+              datasets: ""

@@ -1,0 +1,21 @@
+# Pipeline SDP medallion bronze→silver→gold gerado a partir dos contratos YAML
+# (contracts/ de ingestão, references e gold). Nenhuma lógica de dataset aqui —
+# a fonte de verdade é o contrato. Ver SDD.md.
+resources:
+  pipelines:
+    case_ifood_medallion:
+      name: case_ifood_medallion
+      catalog: case_ifood
+      schema: bronze
+      serverless: true
+      photon: true
+      channel: CURRENT
+      continuous: false
+      development: true   # target dev; prod sobrescreve para false em databricks.yml
+      tags:
+        case: ifood
+        dominio: mobilidade_urbana
+        padrao: medallion
+      libraries:
+        - file:
+            path: 02_pipelines/pipeline_case_ifood.py
