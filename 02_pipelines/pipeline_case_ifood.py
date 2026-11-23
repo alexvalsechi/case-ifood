@@ -173,6 +173,8 @@ for _contrato in CONTRATOS:
             name=nome_validacao,
             private=True,
             comment=f"[privada] {comentario} Avalia regras do contrato e marca violações.",
+            # colunas _orig_* herdadas da bronze usam timestamp_ntz
+            table_properties={"delta.feature.timestampNtz": "supported"},
         )
         @dp.expect_all(drops)
         @dp.expect_all(warns)
@@ -204,6 +206,8 @@ for _contrato in CONTRATOS:
             name=nome_quarentena,
             comment=f"[quarentena] {comentario} Linhas rejeitadas e duplicatas da Silver.",
             cluster_by_auto=True,
+            # colunas _orig_* herdadas da bronze usam timestamp_ntz
+            table_properties={"delta.feature.timestampNtz": "supported"},
         )
         def quarentena():
             df = spark.read.table(nome_validacao)
