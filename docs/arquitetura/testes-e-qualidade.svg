@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3600" height="2600" viewBox="0 0 3600 2600" role="img" aria-labelledby="title desc"><title id="title">Testes automatizados e qualidade dos dados — case-ifood</title><desc id="desc">GitHub Actions: 16 testes Python, validação DAB condicional. Databricks: expectations, quarentena e 24 verificações de auditoria Silver em cinco dimensões DAMA. Execução remota não verificada.</desc><metadata>{&quot;sources_sha256&quot;: {&quot;00_config/motores.py&quot;: &quot;c983d7766128932b264c04bbf6542b4b798d22294ed17941e2eef0e172de4026&quot;, &quot;01_ingestao/ingestao_parametrizada.ipynb&quot;: &quot;2fd66362064d1f19c44f8a0b9329f40b011652a48110a4d4b725d79ebedc23ce&quot;, &quot;02_pipelines/pipeline_case_ifood.py&quot;: &quot;31405316d56515d4cf4fa0fe445cb4a03ad87191547ea2bcdfb4fb7f02e77d4c&quot;, &quot;03_qualidade/qualidade_contratos.ipynb&quot;: &quot;4ae1c88527dda6a40d1abc7a80b063bde0d6d49d62b322e18811ee079d27c923&quot;, &quot;contracts/green_trips.yml&quot;: &quot;5b79d70e037e77157a6721e711c591dde9d7e958e69183cf392db47ac8e6a802&quot;, &quot;contracts/yellow_trips.yml&quot;: &quot;2f570aba4d7fa78fb249e13aa551d852d2a2f155db57cb53217950ca1fc8e6c6&quot;, &quot;contracts/gold/trips.yml&quot;: &quot;7cab367fee2a260373c03fc73e7728562fc24cbc4f8df1a40475e0820b6ec9d3&quot;, &quot;contracts/references/dimensoes_tlc.yml&quot;: &quot;6ed8083b7521746f8d44ad75734c8a652cdf3ce3bc0a650dd2206fcaf9447dd4&quot;, &quot;01_ingestao/atualizar_taxi_zone_lookup.py&quot;: &quot;9b1478950764143473faacac57807a157f71198ea097dadaad54864ca7fc4a22&quot;, &quot;06_analises/consultas_gold.ipynb&quot;: &quot;df479af1cbc64e0fd85c344c4c2d657f79b7c14671606c858c9b97e319a76462&quot;, &quot;databricks.yml&quot;: &quot;96e03fe46da13b44021cdb4abe1bbfec7ae11cf6b5fb87c4c242fe8dbacbd2f6&quot;, &quot;resources/case_ifood_medallion.pipeline.yml&quot;: &quot;a3eb029dea159baec86b8c3e1241778046f5a654f48f77c48247a1a76459af98&quot;, &quot;resources/case_ifood_update_e_qualidade.job.yml&quot;: &quot;70ed8c66cdac97183462e17d0d5784518f845d324db848ad93fad6ce24cad9b7&quot;, &quot;.github/workflows/tests.yml&quot;: &quot;4837dcee93ac23ec3c984e6599d056b64fb5e0f7fdaa83f61f98220a59366786&quot;, &quot;tests/test_contratos.py&quot;: &quot;57b7f9feb14e113b24a146d8025385789ffe6c205ffbec2ab9a51558fba998bd&quot;, &quot;tests/test_dab.py&quot;: &quot;43463888bbc334b81a949ac05c7d47be298b0705c1bab853b6224c7021352fd6&quot;, &quot;tests/test_lookup_guard.py&quot;: &quot;5622438804ff8b4e0ccd2c06f2339ef17bf95cd4cea30288aa57fc01644b8b6b&quot;, &quot;tests/conftest.py&quot;: &quot;85edfc48144df645be16fa8b132bbbd3e5647b22e978f4bbd2b5f2829e27f9ae&quot;, &quot;requirements-dev.txt&quot;: &quot;4758b5639f5b1ddf730be75760a5068ec4412586e240a980fa04c4c04b2a7e66&quot;, &quot;SDD.md&quot;: &quot;04584807adcfedb2a189979a0787cdbb959d156da0ae8544e4317f17178ccb8b&quot;}, &quot;scope&quot;: &quot;static source analysis&quot;}</metadata><rect width="3600" height="2600" fill="#F4F7FB"/><text x="64" y="69" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="700" fill="#087E83">MAPA DE VERIFICAÇÕES  ·  CI E DADOS</text>
+<text x="64" y="162" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="65" font-weight="700" fill="#162B46">Testes automatizados e qualidade dos dados</text>
+<text x="66" y="215" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="30" font-weight="400" fill="#52657B">case-ifood  /  o que o GitHub verifica  /  o que a pipeline e a auditoria avaliam no Databricks</text>
+<rect x="64" y="270" width="1706" height="180" rx="22" fill="#E7F5F3" stroke="#ADD9D5" stroke-width="2"/>
+<text x="90" y="322" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="29" font-weight="700" fill="#087E83">GITHUB ACTIONS · 16 TESTES CONFIGURADOS</text>
+<text x="90" y="372" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="27" font-weight="400" fill="#162B46">push em main + pull_request · Ubuntu · Python 3.12</text>
+<text x="90" y="408" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="27" font-weight="400" fill="#162B46">pip install -r requirements-dev.txt → pytest tests -v</text>
+<rect x="1810" y="270" width="1726" height="180" rx="22" fill="#E7F5F3" stroke="#ADD9D5" stroke-width="2"/>
+<text x="1836" y="322" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="29" font-weight="700" fill="#087E83">DATABRICKS · 5 DIMENSÕES DAMA · 24 VERIFICAÇÕES</text>
+<text x="1836" y="372" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="27" font-weight="400" fill="#162B46">Auditoria sobre silver.yellow_trips e silver.green_trips.</text>
+<text x="1836" y="408" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="27" font-weight="400" fill="#162B46">12 verificações por dataset, após o update da pipeline.</text>
+<rect x="64" y="500" width="1706" height="430" rx="22" fill="#FFFFFF" stroke="#CED9E6" stroke-width="2"/>
+<rect x="86" y="522" width="48" height="45" rx="12" fill="#E7F5F3" stroke="none" stroke-width="2"/>
+<text x="97" y="552" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="22" font-weight="700" fill="#087E83">01</text>
+<text x="152" y="561" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="34" font-weight="700" fill="#162B46">Contratos e carregador · 11 testes</text>
+<polyline points="90,594 1744,594" fill="none" stroke="#087E83" stroke-width="3" stroke-linejoin="round"/>
+<text x="90" y="651" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="700" fill="#087E83">tests/test_contratos.py</text>
+<text x="90" y="695" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="29" font-weight="400" fill="#162B46">5 · Ingestão: campos obrigatórios, destinos Bronze/Silver/quarentena, mapeamento no schema, obrigatórias mapeadas e</text>
+<text x="90" y="736" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="29" font-weight="400" fill="#162B46">dimensões DAMA declaradas.</text>
+<text x="90" y="790" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="29" font-weight="400" fill="#162B46">4 · Gold: membros existentes, nomes únicos, funções permitidas e enriquecimentos com dimensões/colunas válidas.</text>
+<text x="90" y="843" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">1 · Referências: chave, colunas e fonte coerentes.</text>
+<text x="90" y="882" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">1 · Motor: listar_contratos() carrega todos os datasets.</text>
+<rect x="64" y="970" width="1706" height="260" rx="22" fill="#FFFFFF" stroke="#CED9E6" stroke-width="2"/>
+<rect x="86" y="992" width="48" height="45" rx="12" fill="#E7F5F3" stroke="none" stroke-width="2"/>
+<text x="97" y="1022" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="22" font-weight="700" fill="#087E83">02</text>
+<text x="152" y="1031" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="34" font-weight="700" fill="#162B46">Lookup Taxi Zones · 3 testes</text>
+<polyline points="90,1064 1744,1064" fill="none" stroke="#087E83" stroke-width="3" stroke-linejoin="round"/>
+<text x="90" y="1115" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="28" font-weight="400" fill="#162B46">tests/test_lookup_guard.py · HTTP e dbutils simulados.</text>
+<text x="90" y="1178" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="29" font-weight="400" fill="#162B46">CSV com aspas aceito · CSV sem aspas aceito · schema incorreto rejeitado.</text>
+<rect x="64" y="1270" width="1706" height="260" rx="22" fill="#FFFFFF" stroke="#CED9E6" stroke-width="2"/>
+<rect x="86" y="1292" width="48" height="45" rx="12" fill="#E7F5F3" stroke="none" stroke-width="2"/>
+<text x="97" y="1322" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="22" font-weight="700" fill="#087E83">03</text>
+<text x="152" y="1331" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="34" font-weight="700" fill="#162B46">Estrutura DAB · 2 testes</text>
+<polyline points="90,1364 1744,1364" fill="none" stroke="#087E83" stroke-width="3" stroke-linejoin="round"/>
+<text x="90" y="1415" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="28" font-weight="400" fill="#162B46">tests/test_dab.py</text>
+<text x="90" y="1478" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="29" font-weight="400" fill="#162B46">Targets dev/prod; YAMLs dos resources; configuração contracts_dir e existência dos arquivos de pipeline/notebook referenciados.</text>
+<rect x="1810" y="500" width="1726" height="1030" rx="22" fill="#FFFFFF" stroke="#CED9E6" stroke-width="2"/>
+<text x="1836" y="561" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="32" font-weight="700" fill="#7051A3">AUDITORIA SILVER · qualidade_contratos.ipynb</text>
+<text x="1836" y="614" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="700" fill="#52657B">Dimensão</text>
+<text x="2170" y="614" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="700" fill="#52657B">Regra avaliada em cada dataset</text>
+<text x="3290" y="614" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="700" fill="#52657B">Qtd.</text>
+<rect x="1834" y="640" width="1678" height="180" rx="12" fill="#F0ECF8" stroke="none" stroke-width="2"/>
+<text x="1854" y="696" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="700" fill="#7051A3">Completude</text>
+<text x="2170" y="694" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">Nulos em vendor_id, total_amount, pickup e dropoff: Yellow ≤ 1%; Green ≤ 5%.</text>
+<text x="2170" y="733" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">passenger_count: Yellow ≤ 5%; Green ≤ 10%.</text>
+<text x="3310" y="700" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="32" font-weight="700" fill="#7051A3">5</text>
+<rect x="1834" y="828" width="1678" height="185" rx="12" fill="#FFFFFF" stroke="none" stroke-width="2"/>
+<text x="1854" y="884" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="700" fill="#7051A3">Validade</text>
+<text x="2170" y="882" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">total_amount ≥ 0 e trip_distance ≥ 0;</text>
+<text x="2170" y="921" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">passenger_count NULL ou entre 0 e 8;</text>
+<text x="2170" y="960" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">pickup de 2023-01-01 até antes de 2023-06-01.</text>
+<text x="3310" y="888" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="32" font-weight="700" fill="#7051A3">4</text>
+<rect x="1834" y="1021" width="1678" height="120" rx="12" fill="#F0ECF8" stroke="none" stroke-width="2"/>
+<text x="1854" y="1077" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="700" fill="#7051A3">Unicidade</text>
+<text x="2170" y="1075" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">Nenhuma duplicata pela chave trip_id.</text>
+<text x="3310" y="1081" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="32" font-weight="700" fill="#7051A3">1</text>
+<rect x="1834" y="1149" width="1678" height="120" rx="12" fill="#FFFFFF" stroke="none" stroke-width="2"/>
+<text x="1854" y="1205" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="700" fill="#7051A3">Consistência</text>
+<text x="2170" y="1203" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">dropoff_datetime ≥ pickup_datetime.</text>
+<text x="3310" y="1209" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="32" font-weight="700" fill="#7051A3">1</text>
+<rect x="1834" y="1277" width="1678" height="150" rx="12" fill="#F0ECF8" stroke="none" stroke-width="2"/>
+<text x="1854" y="1333" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="700" fill="#7051A3">Pontualidade</text>
+<text x="2170" y="1331" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">Nenhuma corrida fora da janela histórica:</text>
+<text x="2170" y="1370" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">2023-01-01 ≤ pickup &lt; 2023-06-01.</text>
+<text x="3310" y="1337" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="32" font-weight="700" fill="#7051A3">1</text>
+<text x="1836" y="1491" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="700" fill="#7051A3">Total: 12 por dataset × 2 datasets = 24 verificações em dados.</text>
+<rect x="64" y="1580" width="1706" height="340" rx="22" fill="#FFFFFF" stroke="#CED9E6" stroke-width="2"/>
+<rect x="86" y="1602" width="48" height="45" rx="12" fill="#E7F5F3" stroke="none" stroke-width="2"/>
+<text x="97" y="1632" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="22" font-weight="700" fill="#087E83">04</text>
+<text x="152" y="1641" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="34" font-weight="700" fill="#162B46">Validação DAB · job independente</text>
+<polyline points="90,1674 1744,1674" fill="none" stroke="#087E83" stroke-width="3" stroke-linejoin="round"/>
+<text x="90" y="1727" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="30" font-weight="400" fill="#087E83">databricks bundle validate --target dev</text>
+<text x="90" y="1789" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">Executada se DATABRICKS_HOST não estiver vazio. HOST e TOKEN vêm dos secrets; o CLI precisa autenticar no workspace.</text>
+<text x="90" y="1841" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#52657B">A validação não faz deploy e não roda o Job.</text>
+<rect x="1810" y="1580" width="1726" height="340" rx="22" fill="#FFFFFF" stroke="#CED9E6" stroke-width="2"/>
+<rect x="1832" y="1602" width="48" height="45" rx="12" fill="#EAF1F9" stroke="none" stroke-width="2"/>
+<text x="1843" y="1632" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="22" font-weight="700" fill="#466B91">05</text>
+<text x="1898" y="1641" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="34" font-weight="700" fill="#162B46">Qualidade durante a transformação</text>
+<polyline points="1836,1674 3510,1674" fill="none" stroke="#466B91" stroke-width="3" stroke-linejoin="round"/>
+<text x="1836" y="1735" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">MV privada: expect_all registra métricas no event log. O código classifica e roteia as linhas pelas regras DROP.</text>
+<text x="1836" y="1787" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">Conformes → Silver; inválidas + duplicatas excedentes → quarentena. passenger_count nulo gera WARN e permanece na Silver.</text>
+<rect x="64" y="2010" width="1706" height="340" rx="22" fill="#FFFFFF" stroke="#CED9E6" stroke-width="2"/>
+<rect x="86" y="2032" width="48" height="45" rx="12" fill="#F0ECF8" stroke="none" stroke-width="2"/>
+<text x="97" y="2062" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="22" font-weight="700" fill="#7051A3">06</text>
+<text x="152" y="2071" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="34" font-weight="700" fill="#162B46">Relatério e interrupção por falha</text>
+<polyline points="90,2104 1744,2104" fill="none" stroke="#7051A3" stroke-width="3" stroke-linejoin="round"/>
+<text x="90" y="2167" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="30" font-weight="700" fill="#7051A3">Job: pipeline_update → qualidade_contratos</text>
+<text x="90" y="2219" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">Append em case_ifood.governanca.dq_resultados: PASS/FAIL, métrica, horário e até 5 exemplos JSON por regra com falha.</text>
+<text x="90" y="2271" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">Após gravar, qualquer FAIL lança exceção no notebook.</text>
+<rect x="1810" y="2010" width="1726" height="340" rx="22" fill="#FFFFFF" stroke="#CED9E6" stroke-width="2"/>
+<rect x="1832" y="2032" width="48" height="45" rx="12" fill="#EDF1F5" stroke="none" stroke-width="2"/>
+<text x="1843" y="2062" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="22" font-weight="700" fill="#6C7887">07</text>
+<text x="1898" y="2071" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="34" font-weight="700" fill="#162B46">Como interpretar as verificações</text>
+<polyline points="1836,2104 3510,2104" fill="none" stroke="#6C7887" stroke-width="3" stroke-linejoin="round"/>
+<text x="1836" y="2165" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">CI testa lógica Python e estrutura dos contratos; não executa Spark, joins, agregações ou dados reais.</text>
+<text x="1836" y="2217" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">Auditoria lê a Silver após a quarentena; PASS não mede descartes. Pontualidade usa a janela histórica. Não há check de volume</text>
+<text x="1836" y="2256" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">mínimo.</text>
+<polyline points="64,2400 3536,2400" fill="none" stroke="#CED9E6" stroke-width="2" stroke-linejoin="round"/>
+<text x="64" y="2460" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="27" font-weight="700" fill="#52657B">ESCOPO: configuração e implementação versionadas; resultados de execuções remotas não foram consultados.</text>
+<text x="64" y="2509" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#52657B">Pré-requisito de runtime: ajustar a célula inicial (Markdown marcado como código) e o import fixo do notebook de qualidade.</text>
+<text x="64" y="2555" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#52657B">CI sem lint, análise de segurança ou cobertura configurados · não há deploy automático no workflow atual.</text></svg>
