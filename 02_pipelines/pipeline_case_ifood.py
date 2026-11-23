@@ -6,13 +6,38 @@
 # Nova unificação/agregado gold = novo contrato de gold em contracts/gold/.
 # =============================================================================
 import os
+import sys
 
 import yaml
 from pyspark import pipelines as dp
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 
-CONTRACTS_DIR = "/Workspace/Repos/alexvalsechibosque@gmail.com/case-ifood/contracts"
+# Contratos localizados de forma PORTÁVEL (sem path absoluto hardcoded):
+# 1) configuração do pipeline 'case_ifood.contracts_dir' — setável via
+#    settings ou DAB por target (ex.: ${workspace.file_path}/contracts);
+# 2) fallback: o root_path do pipeline entra no sys.path; o pai dele é a
+#    raiz do projeto, que contém contracts/.
+# (O runtime do SDP executa o código de uma cópia efêmera, sem __file__.)
+def _localizar_contracts():
+    try:
+        return spark.conf.get("case_ifood.contracts_dir")
+    except Exception:
+        pass
+    for entrada in sys.path:
+        if entrada:
+            candidato = os.path.join(
+                os.path.dirname(os.path.abspath(entrada)), "contracts"
+            )
+            if os.path.isdir(candidato):
+                return candidato
+    raise RuntimeError(
+        "contracts/ não localizado: configure 'case_ifood.contracts_dir' no "
+        "pipeline (settings/DAB) ou rode com root_path=<raiz>/02_pipelines."
+    )
+
+
+CONTRACTS_DIR = _localizar_contracts()
 
 
 def _carregar_contratos():

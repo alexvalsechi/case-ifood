@@ -29,6 +29,10 @@ def test_resources_sao_yaml_validos_com_caminhos_existentes():
         with open(caminho, encoding="utf-8") as fh:
             doc = yaml.safe_load(fh)
         for pipeline in doc.get("resources", {}).get("pipelines", {}).values():
+            conf = pipeline.get("configuration", {})
+            assert "case_ifood.contracts_dir" in conf, (
+                "pipeline sem a configuração case_ifood.contracts_dir (portabilidade)"
+            )
             for lib in pipeline.get("libraries", []):
                 alvo = os.path.join(RAIZ, lib["file"]["path"])
                 assert os.path.isfile(alvo), f"biblioteca inexistente: {alvo}"

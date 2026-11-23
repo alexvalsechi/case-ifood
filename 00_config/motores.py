@@ -12,9 +12,10 @@ from datetime import datetime, timezone
 
 import yaml
 
-# Caminho base do projeto no workspace
-BASE_PATH = "/Workspace/Repos/alexvalsechibosque@gmail.com/case-ifood"
-CONTRACTS_DIR = f"{BASE_PATH}/contracts"
+# Caminho base do projeto: relativo a este arquivo (00_config/) — portável
+# entre workspaces e para cópias deployadas via DAB (sem path absoluto).
+BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CONTRACTS_DIR = os.path.join(BASE_PATH, "contracts")
 
 
 def carregar_contrato(nome_dataset):

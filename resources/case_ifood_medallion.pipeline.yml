@@ -12,6 +12,10 @@ resources:
       channel: CURRENT
       continuous: false
       development: true   # target dev; prod sobrescreve para false em databricks.yml
+      configuration:
+        # Path dos contratos, portável por target: no deploy via DAB resolve
+        # para o file_path do bundle; o motor lê via spark.conf.
+        case_ifood.contracts_dir: ${workspace.file_path}/contracts
       tags:
         case: ifood
         dominio: mobilidade_urbana
