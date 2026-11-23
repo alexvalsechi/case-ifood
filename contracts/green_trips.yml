@@ -1,0 +1,110 @@
+# =============================================================================
+# Contrato de dados — green_trips (NYC TLC Green Taxi)
+# Fonte única da verdade para: ingestão, SDP, qualidade, observabilidade e segurança.
+# =============================================================================
+dataset: green_trips
+taxi_type: green
+dominio: mobilidade_urbana
+owner: alexvalsechibosque@gmail.com
+descricao: >
+  Corridas de green taxi (boro taxi) da cidade de Nova York (TLC), jan-mai 2023.
+  Grain: uma linha por corrida. Colunas de horario usam prefixo lpep_.
+
+fonte:
+  tipo: volume_parquet
+  volume: /Volumes/case_ifood/landing/files
+  glob: green_tripdata_2023-*.parquet
+  formato: parquet
+  # template da fonte oficial (TLC) para baixar periodos futuros via motor
+  url_template: "https://d37ci6vzurychx.cloudfront.net/trip-data/{taxi_type}_tripdata_{ano}-{mes}.parquet"
+
+destinos:
+  bronze: case_ifood.bronze.green_trips
+  silver: case_ifood.silver.green_trips
+
+chave_dedupe_origem: [VendorID, lpep_pickup_datetime, lpep_dropoff_datetime, PULocationID, DOLocationID]
+
+# Mapeamento bronze -> silver. Green tem colunas proprias (ehail_fee, trip_type).
+# Valor pode ser string (uma coluna de origem) ou lista (coalesce das colunas na ordem).
+mapeamento_silver:
+  vendor_id: VendorID
+  passenger_count: passenger_count
+  trip_distance: trip_distance
+  rate_code_id: RatecodeID
+  store_and_fwd_flag: store_and_fwd_flag
+  pickup_location_id: PULocationID
+  dropoff_location_id: DOLocationID
+  payment_type: payment_type
+  fare_amount: fare_amount
+  extra: extra
+  mta_tax: mta_tax
+  tip_amount: tip_amount
+  tolls_amount: tolls_amount
+  improvement_surcharge: improvement_surcharge
+  total_amount: total_amount
+  congestion_surcharge: congestion_surcharge
+  ehail_fee: ehail_fee
+  trip_type: trip_type
+  pickup_datetime: lpep_pickup_datetime
+  dropoff_datetime: lpep_dropoff_datetime
+
+# Schema canonico da bronze: os parquets mensais da TLC variam de tipos fisicos
+# (int/bigint/double). Cada arquivo e lido com o proprio schema e normalizado
+# para este schema via cast.
+schema_bronze:
+  VendorID: bigint
+  lpep_pickup_datetime: timestamp_ntz
+  lpep_dropoff_datetime: timestamp_ntz
+  store_and_fwd_flag: string
+  RatecodeID: double
+  PULocationID: bigint
+  DOLocationID: bigint
+  passenger_count: double
+  trip_distance: double
+  fare_amount: double
+  extra: double
+  mta_tax: double
+  tip_amount: double
+  tolls_amount: double
+  ehail_fee: double
+  improvement_surcharge: double
+  total_amount: double
+  payment_type: double
+  trip_type: double
+  congestion_surcharge: double
+
+# Colunas obrigatorias na camada de consumo (requisito do case, equivalentes lpep_)
+colunas_obrigatorias: [vendor_id, passenger_count, total_amount, pickup_datetime, dropoff_datetime]
+
+regras_qualidade:
+  completude:
+    colunas: [vendor_id, total_amount, pickup_datetime, dropoff_datetime]
+    max_pct_nulo: 0.05
+    # passenger_count: motorista pode nao registrar; tolerancia propria
+    excessoes:
+      passenger_count: 0.10
+  validade:
+    regras:
+      - coluna: total_amount
+        expressao: total_amount >= 0
+      - coluna: passenger_count
+        expressao: passenger_count IS NULL OR passenger_count BETWEEN 0 AND 8
+      - coluna: trip_distance
+        expressao: trip_distance >= 0
+      # fora da janela SLA = invalida: descartada da silver (fica na bronze)
+      - coluna: pickup_datetime
+        expressao: pickup_datetime >= '2023-01-01' AND pickup_datetime < '2023-06-01'
+  unicidade:
+    chave: trip_id
+  consistencia:
+    regras:
+      - dropoff_datetime >= pickup_datetime
+  pontualidade:
+    janela_inicio: '2023-01-01'
+    janela_fim: '2023-06-01'
+
+colunas_pii: []
+tags:
+  dominio: mobilidade_urbana
+  contem_pii: "false"
+  fonte_oficial: nyc_tlc

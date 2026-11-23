@@ -1,0 +1,114 @@
+# =============================================================================
+# Contrato de dados — yellow_trips (NYC TLC Yellow Taxi)
+# Fonte única da verdade para: ingestão, SDP, qualidade, observabilidade e segurança.
+# =============================================================================
+dataset: yellow_trips
+taxi_type: yellow
+dominio: mobilidade_urbana
+owner: alexvalsechibosque@gmail.com
+descricao: >
+  Corridas de yellow taxi da cidade de Nova York (TLC), jan-mai 2023.
+  Grain: uma linha por corrida.
+
+fonte:
+  tipo: volume_parquet
+  volume: /Volumes/case_ifood/landing/files
+  glob: yellow_tripdata_2023-*.parquet
+  formato: parquet
+  # template da fonte oficial (TLC) para baixar periodos futuros via motor
+  url_template: "https://d37ci6vzurychx.cloudfront.net/trip-data/{taxi_type}_tripdata_{ano}-{mes}.parquet"
+
+destinos:
+  bronze: case_ifood.bronze.yellow_trips
+  silver: case_ifood.silver.yellow_trips
+
+# Colunas originais usadas na deduplicacao (chave de negocio da corrida)
+chave_dedupe_origem: [VendorID, tpep_pickup_datetime, tpep_dropoff_datetime, PULocationID, DOLocationID]
+
+# Mapeamento bronze -> silver (normalizacao de nomes). Colunas fora deste mapa sao descartadas.
+# Valor pode ser string (uma coluna de origem) ou lista (coalesce das colunas na ordem).
+mapeamento_silver:
+  vendor_id: VendorID
+  passenger_count: passenger_count
+  trip_distance: trip_distance
+  rate_code_id: RatecodeID
+  store_and_fwd_flag: store_and_fwd_flag
+  pickup_location_id: PULocationID
+  dropoff_location_id: DOLocationID
+  payment_type: payment_type
+  fare_amount: fare_amount
+  extra: extra
+  mta_tax: mta_tax
+  tip_amount: tip_amount
+  tolls_amount: tolls_amount
+  improvement_surcharge: improvement_surcharge
+  total_amount: total_amount
+  congestion_surcharge: congestion_surcharge
+  airport_fee: airport_fee
+  pickup_datetime: tpep_pickup_datetime
+  dropoff_datetime: tpep_dropoff_datetime
+
+# Schema canonico da bronze: os parquets mensais da TLC variam de tipos fisicos
+# (int/bigint/double) e capitalizacao (Airport_fee x airport_fee). Cada arquivo e
+# lido com o proprio schema e normalizado para este schema via cast.
+schema_bronze:
+  VendorID: bigint
+  tpep_pickup_datetime: timestamp_ntz
+  tpep_dropoff_datetime: timestamp_ntz
+  passenger_count: double
+  trip_distance: double
+  RatecodeID: double
+  store_and_fwd_flag: string
+  PULocationID: bigint
+  DOLocationID: bigint
+  payment_type: bigint
+  fare_amount: double
+  extra: double
+  mta_tax: double
+  tip_amount: double
+  tolls_amount: double
+  improvement_surcharge: double
+  total_amount: double
+  congestion_surcharge: double
+  airport_fee: double
+
+# Nota: alguns meses usam 'Airport_fee' (capitalizado); o fluxo bronze faz
+# coalesce das variantes case-insensitive para a coluna canônica 'airport_fee'.
+
+# Colunas obrigatorias na camada de consumo (requisito do case)
+colunas_obrigatorias: [vendor_id, passenger_count, total_amount, pickup_datetime, dropoff_datetime]
+
+regras_qualidade:
+  completude:
+    colunas: [vendor_id, total_amount, pickup_datetime, dropoff_datetime]
+    max_pct_nulo: 0.01
+    # passenger_count nao e registrado por ~2,7% dos motoristas (realidade dos
+    # dados TLC): tolerancia propria, ainda exigida como coluna obrigatoria
+    excessoes:
+      passenger_count: 0.05
+  validade:
+    regras:
+      - coluna: total_amount
+        expressao: total_amount >= 0
+      - coluna: passenger_count
+        expressao: passenger_count IS NULL OR passenger_count BETWEEN 0 AND 8
+      - coluna: trip_distance
+        expressao: trip_distance >= 0
+      # fora da janela SLA = invalida: descartada da silver (fica na bronze)
+      - coluna: pickup_datetime
+        expressao: pickup_datetime >= '2023-01-01' AND pickup_datetime < '2023-06-01'
+  unicidade:
+    chave: trip_id
+  consistencia:
+    regras:
+      - dropoff_datetime >= pickup_datetime
+  pontualidade:
+    # dados historicos em lote: SLA aplicado a corridas dentro do periodo contratado
+    janela_inicio: '2023-01-01'
+    janela_fim: '2023-06-01'
+
+colunas_pii: []
+tags:
+  dominio: mobilidade_urbana
+  contem_pii: "false"
+  fonte_oficial: nyc_tlc

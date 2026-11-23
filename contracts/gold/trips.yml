@@ -1,0 +1,44 @@
+# =============================================================================
+# Contrato de gold — corridas TLC (unificação das silvers de green e yellow)
+# Declara explicitamente quais datasets formam a visão de consumo e quais
+# agregados derivam dela. O pipeline gera as MVs gold a partir deste arquivo.
+# =============================================================================
+nome: case_ifood.gold.trips_consolidado
+descricao: >
+  União dos datasets silver com taxi_type — camada de consumo.
+
+# Datasets (contratos de ingestão) unificados no consolidado, na ordem em que a
+# união acontece: o primeiro membro define o layout de colunas base e os
+# seguintes acrescentam colunas próprias (unionByName com colunas ausentes).
+membros: [green_trips, yellow_trips]
+
+cluster_by_auto: true
+
+# Agregados derivados do consolidado (uma MV gold por item).
+agregados:
+  - nome: case_ifood.gold.trips_diario
+    descricao: >
+      Agregado diário por taxi_type: corridas, média de total_amount e de
+      passageiros.
+    # dimensões de agrupamento: coluna (+ alias e transformação opcionais;
+    # transformação suportada: to_date)
+    agrupar_por:
+      - alias: data_corrida
+        coluna: pickup_datetime
+        transformacao: to_date
+      - coluna: taxi_type
+    # medidas: funcao em [count, count_distinct, sum, avg, min, max]
+    medidas:
+      - alias: qtd_corridas
+        funcao: count
+        coluna: "*"
+      - alias: media_total_amount
+        funcao: avg
+        coluna: total_amount
+      - alias: media_passageiros
+        funcao: avg
+        coluna: passenger_count
+      - alias: soma_distancia_km
+        funcao: sum
+        coluna: trip_distance
+    cluster_by: [data_corrida]
