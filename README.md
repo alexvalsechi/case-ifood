@@ -2,6 +2,47 @@
 
 Solução do case técnico iFood (Data Architect) na Databricks: ingestão orientada a **contratos de dados** e pipeline lakehouse medallion **bronze → silver → gold** no Unity Catalog, com motores de qualidade, observabilidade e segurança de metadados.
 
+## Diagrama da arquitetura implementada
+
+![Arquitetura do projeto: contratos, ingestão, bronze, silver, gold, log de ingestão, qualidade e limites de observabilidade](docs/arquitetura/arquitetura-projeto.png)
+
+[Imagem PNG em alta resolução](docs/arquitetura/arquitetura-projeto.png) · [SVG editável](docs/arquitetura/arquitetura-projeto.svg) · [Gerador do diagrama](docs/arquitetura/gerar_diagrama.py)
+
+O diagrama foi reconstruído a partir do código e dos contratos deste checkout. As setas distinguem dados, configuração por YAML e log/auditoria. Contornos tracejados identificam capacidades apenas declaradas ou com implementação parcial. A execução e a configuração do workspace Databricks não foram verificadas.
+
+### Evidências no repositório
+
+| Etapa | Implementação e contrato que a orienta |
+| --- | --- |
+| Seleção e despacho da ingestão | [`01_ingestao/ingestao_parametrizada.ipynb`](01_ingestao/ingestao_parametrizada.ipynb), células 0 e 1: `carregar_contrato(f"{taxi_type}_trips")`, widgets `taxi_type`, `catalogo`, `ano`, `meses`, `origem`; despacho para `baixar_da_fonte()` ou `executar_ingestao()`. As células são numeradas a partir de zero. |
+| Fonte HTTP → landing | [`00_config/motores.py`](00_config/motores.py), `baixar_da_fonte()`: `fonte.url_template` → download HTTP em partes, até 3 tentativas e arquivo temporário → `fonte.volume`. Arquivo existente e não vazio é pulado. O checksum MD5 cobre somente os primeiros 64 MiB. |
+| Caminho `raw` | `executar_ingestao()` aceita volumes de origem e destino, mas o notebook não os fornece: ambos assumem `fonte.volume`. Portanto, a chamada padrão reconhece arquivos já presentes na landing e registra `ja_existia`; não estabelece uma segunda zona raw. O critério real de skip é destino existente com tamanho maior que zero. |
+| Contratos dos datasets | [`contracts/green_trips.yml`](contracts/green_trips.yml) e [`contracts/yellow_trips.yml`](contracts/yellow_trips.yml): fonte, glob, schema canônico, nomes de destino, chave de deduplicação, mapeamento e regras. O pipeline tem seu próprio carregador `_carregar_contratos()`; o motor de ingestão e o notebook de qualidade usam os carregadores de `motores.py`. |
+| Landing → bronze | [`02_pipelines/pipeline_case_ifood.py`](02_pipelines/pipeline_case_ifood.py): `dp.create_streaming_table()` + `_criar_fluxo_arquivo()` com `@dp.append_flow(once=True)`, um fluxo por arquivo encontrado pelo glob durante a construção do pipeline. A leitura de cada Parquet é batch via `spark.read`; aplica casts para `schema_bronze`, normalização de caixa, NULL para colunas ausentes e adiciona `_arquivo_origem` e `_ingestao_ts`. |
+| Bronze → silver | `_criar_silver()` cria materialized views com clustering automático. Calcula `trip_id = xxhash64(...)` sobre as colunas originais, convertidas para string: `VendorID`, pickup, dropoff, `PULocationID`, `DOLocationID` (timestamps `lpep_*` no green e `tpep_*` no yellow). Aplica `mapeamento_silver`, cast de nomes contendo `datetime`, `taxi_type` e `dropDuplicates(["trip_id"])`. |
+| Qualidade durante a transformação | `_expectations_do_contrato()` deriva `@dp.expect_all_or_drop` de validade, consistência e obrigatoriedade dos campos, exceto `passenger_count`. Este recebe `@dp.expect_all` para nulos (warn, registro mantido). Validade de passageiros aceita NULL ou faixa 0–8. Linhas rejeitadas continuam disponíveis na bronze; não há tabela de quarentena no código. |
+| Silver → gold | [`contracts/gold/trips.yml`](contracts/gold/trips.yml) → `_carregar_contratos_gold()` valida membros e funções; `_criar_gold_consolidado()` lê green e depois yellow e aplica `unionByName(allowMissingColumns=True)`. Gera `case_ifood.gold.trips_consolidado` como MV com clustering automático. A união não aplica deduplicação global. |
+| Agregado diário | `_expressao_dimensao()`, `_expressao_medida()` e `_criar_gold_agregado()` geram `case_ifood.gold.trips_diario` a partir do consolidado: `to_date(pickup_datetime)` como `data_corrida`, `taxi_type`, `count(*)`, `avg(total_amount)`, `avg(passenger_count)` e `sum(trip_distance)`. Clustering por `data_corrida`. O alias `soma_distancia_km` é literal do contrato; não existe conversão de unidade no código. |
+| Log operacional | Os dois motores de ingestão fazem append em `case_ifood.governanca.log_ingestao`: dataset, arquivo, fonte, tamanho, checksum, status, timestamp e mensagem. `criar_tabelas_governanca()` cria as tabelas Delta de governança. |
+| Auditoria posterior de qualidade | [`03_qualidade/qualidade_contratos.ipynb`](03_qualidade/qualidade_contratos.ipynb), células 1 e 2: `listar_contratos()` → leitura das tabelas silver → completude, validade, unicidade, consistência e pontualidade. `_registrar()` e `_exemplos_violacoes()` produzem métricas PASS/FAIL e até 5 exemplos JSON para regras com falha, gravados em append em `case_ifood.governanca.dq_resultados`. Qualquer FAIL lança exceção depois da persistência. |
+| Observabilidade e segurança | `criar_tabelas_governanca()` contém o DDL de `case_ifood.governanca.obs_metricas`, mas nenhum escritor/coletor foi localizado. `owner`, `dominio`, `colunas_pii` e `tags` estão nos contratos; não foi localizada aplicação de GRANTs ou tags neste checkout. |
+
+### Limites e diferenças em relação à documentação
+
+- O Job `case_ifood_ingestao_orquestrador` e a sequência ingestão → pipeline → qualidade → observabilidade → segurança são descritos abaixo, mas a definição do Job não está versionada. Os diretórios `04_observabilidade`, `05_seguranca` e `06_analises` citados na estrutura também não estão presentes neste checkout. A imagem distingue essas referências da implementação verificável.
+- Os glob dos contratos selecionam arquivos de **2023** e a validade do pickup está fixada em **2023-01-01 ≤ pickup < 2023-06-01**. Alterar `ano` ou `meses` no notebook de ingestão não modifica essas regras do pipeline. A dimensão de pontualidade testa essa janela histórica, não freshness operacional.
+- A auditoria lê a **silver após os descartes**; PASS não informa a quantidade de linhas rejeitadas da bronze. Não existe regra explícita de volume mínimo e o percentual de nulos é zero quando a tabela está vazia. Filtros SQL `NOT(expressão)` não contam resultados NULL como violações; completude é avaliada separadamente para as colunas configuradas.
+- `_arquivo_origem` e `_ingestao_ts` não são selecionados pela silver e não chegam à gold. O código demonstra rastreabilidade de arquivo na bronze e dependências entre tabelas, sem comprovar captura de linhagem nativa no ambiente nem rastreabilidade por registro até o consumo.
+- No arquivo de qualidade versionado, a célula 0 contém texto Markdown, mas está marcada como `code`, sem `%md`. Esse conteúdo não é Python válido. A imagem representa a lógica das células 1 e 2; a execução integral desse notebook, como exportado, requer corrigir o tipo da célula inicial. Nenhum notebook foi alterado para produzir o diagrama.
+
+Para reproduzir a imagem localmente, com **Pillow** e **PyYAML** instalados:
+
+```powershell
+python docs/arquitetura/gerar_diagrama.py
+```
+
+O gerador produz o PNG de **3600 × 2740**, o SVG com texto editável e uma prévia. Os arquivos finais incluem hashes SHA-256 das fontes em seus metadados para identificar a base usada na geração. A renderização utiliza fontes locais (Segoe UI/Consolas no Windows, com fallback DejaVu no Linux).
+
 ## Estrutura
 
 ```text

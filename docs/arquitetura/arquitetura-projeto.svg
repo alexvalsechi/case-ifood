@@ -1,0 +1,229 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3600" height="2740" viewBox="0 0 3600 2740" role="img" aria-labelledby="title desc"><title id="title">Arquitetura do lakehouse NYC Taxi — case-ifood</title><desc id="desc">Arquitetura reconstruída do repositório case-ifood. Fluxos de dados sólidos, configuração YAML tracejada em teal e log/auditoria em roxo. Observabilidade, Job e segurança não são apresentados como implementação verificada.</desc><metadata>{&quot;sources_sha256&quot;: {&quot;00_config/motores.py&quot;: &quot;f1f825a17c15c29589a0ce556d4d09ed5947cee1b88ec6267054b25430d28ca2&quot;, &quot;01_ingestao/ingestao_parametrizada.ipynb&quot;: &quot;5e498fc87012a1f1a9237cd1b11d17a5eb5c878010d3aaee374733e7a35c784e&quot;, &quot;02_pipelines/pipeline_case_ifood.py&quot;: &quot;21bfb5a413aa1dc9c9fbc76e54e48655c73f81b03e94e1d0c106d6aca6eaa3c2&quot;, &quot;03_qualidade/qualidade_contratos.ipynb&quot;: &quot;3cc7c6a316e38fba7dcb62d10dd3adcd48430ee0153b3e60e6f89799f668a8a6&quot;, &quot;contracts/green_trips.yml&quot;: &quot;e6133992eb6c70a2a04f547ee0f4a5e7b31cea92008ccd4a36a68c93edce9223&quot;, &quot;contracts/yellow_trips.yml&quot;: &quot;1eb0540838762a969144a9381a8d0006f278b959b58a6da59d8f410cb47da3e4&quot;, &quot;contracts/gold/trips.yml&quot;: &quot;77a7a84e708452dc80afd97103b8d94294523ec7871e8e1dfc2b8b568ec025d5&quot;, &quot;README.md&quot;: &quot;272e32229ddd2f07c6d971bd98cc3d845f374712e68ed6ea9ce3491edd64fa62&quot;, &quot;SDD.md&quot;: &quot;1eb4babb9b229f18e06a87d606230fad87c13ee3533bd097246f324dd82e388c&quot;}, &quot;scope&quot;: &quot;static source analysis&quot;}</metadata><rect width="3600" height="2740" fill="#F4F7FB"/><text x="64" y="71" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="24" font-weight="700" fill="#087E83">LAKEHOUSE NYC TAXI</text>
+<text x="64" y="155" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="62" font-weight="700" fill="#162B46">Arquitetura implementada no repositório</text>
+<text x="66" y="206" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="29" font-weight="400" fill="#52657B">case-ifood  /  Databricks  /  contratos YAML → ingestão → bronze → silver → gold</text>
+<polyline points="1920,62 1978,62" fill="none" stroke="#162B46" stroke-width="4" stroke-linejoin="round"/>
+<text x="1992" y="68" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="24" font-weight="400" fill="#162B46">Dados</text>
+<polyline points="2160,62 2218,62" fill="none" stroke="#087E83" stroke-width="4" stroke-linejoin="round" stroke-dasharray="11 8"/>
+<text x="2232" y="68" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="24" font-weight="400" fill="#087E83">Contrato / configuração</text>
+<polyline points="2710,62 2768,62" fill="none" stroke="#7051A3" stroke-width="4" stroke-linejoin="round"/>
+<text x="2782" y="68" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="24" font-weight="400" fill="#7051A3">Log / auditoria</text>
+<polyline points="3100,62 3158,62" fill="none" stroke="#6C7887" stroke-width="4" stroke-linejoin="round" stroke-dasharray="11 8"/>
+<text x="3172" y="68" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="24" font-weight="400" fill="#6C7887">Só declarado</text>
+<rect x="64" y="248" width="1686" height="342" rx="22" fill="#E7F5F3" stroke="#ADD9D5" stroke-width="2"/>
+<rect x="1780" y="248" width="1756" height="342" rx="22" fill="#E7F5F3" stroke="#ADD9D5" stroke-width="2"/>
+<text x="90" y="293" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="700" fill="#087E83">CONTRATOS DE INGESTÃO + SILVER</text>
+<text x="90" y="331" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="28" font-weight="400" fill="#162B46">contracts/green_trips.yml  +  contracts/yellow_trips.yml</text>
+<text x="90" y="387" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">fonte · destinos · schema_bronze · mapeamento_silver · chave_dedupe_origem · regras_qualidade</text>
+<text x="90" y="464" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="25" font-weight="400" fill="#087E83">carregar_contrato() → motores de ingestão</text>
+<text x="90" y="504" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="25" font-weight="400" fill="#087E83">_carregar_contratos() → geração das tabelas bronze / silver</text>
+<text x="90" y="544" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="25" font-weight="400" fill="#087E83">listar_contratos() → notebook de qualidade</text>
+<text x="1806" y="293" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="700" fill="#087E83">CONTRATO DE CONSUMO / GOLD</text>
+<text x="1806" y="331" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="28" font-weight="400" fill="#162B46">contracts/gold/trips.yml → _carregar_contratos_gold()</text>
+<text x="1806" y="384" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="27" font-weight="400" fill="#087E83">membros → _criar_gold_consolidado()</text>
+<text x="1806" y="428" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="27" font-weight="400" fill="#087E83">agrupar_por → _expressao_dimensao()</text>
+<text x="1806" y="472" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="27" font-weight="400" fill="#087E83">medidas → _expressao_medida() → _criar_gold_agregado()</text>
+<text x="1806" y="536" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#52657B">Valida os membros e as funções permitidas: count, count_distinct, sum, avg, min, max.</text>
+<rect x="530" y="670" width="3028" height="985" rx="28" fill="#EAF0F7" stroke="#CEDAE8" stroke-width="2"/>
+<text x="556" y="720" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="27" font-weight="700" fill="#52657B">DATABRICKS  ·  case_ifood</text>
+<text x="1632" y="717" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="700" fill="#52657B">LAKEFLOW SDP  ·  pyspark.pipelines as dp</text>
+<polyline points="900,590 900,629 2842,629" fill="none" stroke="#087E83" stroke-width="3" stroke-linejoin="round" stroke-dasharray="11 8"/>
+<polyline points="1076,629 1076,790" fill="none" stroke="#087E83" stroke-width="3" stroke-linejoin="round" stroke-dasharray="11 8"/>
+<polygon points="1076,790 1069.0733123668776,776.6950761583107 1082.9266876331224,776.6950761583107" fill="#087E83"/>
+<polyline points="2174,629 2174,790" fill="none" stroke="#087E83" stroke-width="3" stroke-linejoin="round" stroke-dasharray="11 8"/>
+<polygon points="2174,790 2167.073312366878,776.6950761583107 2180.926687633122,776.6950761583107" fill="#087E83"/>
+<polyline points="2842,629 2842,790" fill="none" stroke="#087E83" stroke-width="3" stroke-linejoin="round" stroke-dasharray="11 8"/>
+<polygon points="2842,790 2835.073312366878,776.6950761583107 2848.926687633122,776.6950761583107" fill="#087E83"/>
+<polyline points="3510,590 3510,790" fill="none" stroke="#087E83" stroke-width="3" stroke-linejoin="round" stroke-dasharray="11 8"/>
+<polygon points="3510,790 3503.073312366878,776.6950761583107 3516.926687633122,776.6950761583107" fill="#087E83"/>
+<rect x="64" y="790" width="430" height="790" rx="22" fill="#FFFFFF" stroke="#CED9E6" stroke-width="2"/>
+<rect x="86" y="812" width="48" height="45" rx="12" fill="#E7F5F3" stroke="none" stroke-width="2"/>
+<text x="97" y="842" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="22" font-weight="700" fill="#087E83">01</text>
+<text x="152" y="851" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="34" font-weight="700" fill="#162B46">Fonte</text>
+<polyline points="90,884 468,884" fill="none" stroke="#087E83" stroke-width="3" stroke-linejoin="round"/>
+<text x="90" y="938" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="22" font-weight="700" fill="#087E83">NYC TAXI &amp; LIMOUSINE</text>
+<text x="90" y="987" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="31" font-weight="700" fill="#162B46">Yellow + Green Taxi</text>
+<text x="90" y="1039" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">Arquivos mensais Parquet</text>
+<text x="90" y="1078" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="400" fill="#162B46">publicados pela TLC.</text>
+<polyline points="90,1099 468,1099" fill="none" stroke="#CED9E6" stroke-width="2" stroke-linejoin="round"/>
+<text x="90" y="1135" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="24" font-weight="400" fill="#162B46">d37ci6vzurychx.</text>
+<text x="90" y="1169" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="24" font-weight="400" fill="#162B46">cloudfront.net/</text>
+<text x="90" y="1203" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="24" font-weight="400" fill="#162B46">trip-data/</text>
+<text x="90" y="1261" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">URL montada com taxi_type, ano</text>
+<text x="90" y="1298" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">e mês pelo url_template do</text>
+<text x="90" y="1335" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">contrato.</text>
+<polyline points="90,1356 468,1356" fill="none" stroke="#CED9E6" stroke-width="2" stroke-linejoin="round"/>
+<text x="90" y="1404" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="27" font-weight="700" fill="#162B46">Grão: uma linha por corrida.</text>
+<text x="90" y="1454" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#52657B">Escopo contratado: janeiro a</text>
+<text x="90" y="1490" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#52657B">maio de 2023.</text>
+<rect x="552" y="790" width="550" height="790" rx="22" fill="#FFFFFF" stroke="#CED9E6" stroke-width="2"/>
+<rect x="574" y="812" width="48" height="45" rx="12" fill="#E7F5F3" stroke="none" stroke-width="2"/>
+<text x="585" y="842" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="22" font-weight="700" fill="#087E83">02</text>
+<text x="640" y="851" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="34" font-weight="700" fill="#162B46">Ingestão</text>
+<polyline points="578,884 1076,884" fill="none" stroke="#087E83" stroke-width="3" stroke-linejoin="round"/>
+<text x="578" y="932" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="24" font-weight="400" fill="#162B46">01_ingestao/</text>
+<text x="578" y="965" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="24" font-weight="400" fill="#162B46">ingestao_parametrizada.ipynb</text>
+<text x="578" y="1015" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="28" font-weight="400" fill="#087E83">carregar_contrato()</text>
+<text x="578" y="1074" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">Widgets: taxi_type, catalogo, ano, meses,</text>
+<text x="578" y="1110" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">origem.</text>
+<polyline points="578,1130 1076,1130" fill="none" stroke="#CED9E6" stroke-width="2" stroke-linejoin="round"/>
+<text x="578" y="1173" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="23" font-weight="700" fill="#087E83">origem=url</text>
+<text x="578" y="1208" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="27" font-weight="400" fill="#162B46">baixar_da_fonte()</text>
+<text x="578" y="1261" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">HTTP stream, até 3 tentativas; arquivo</text>
+<text x="578" y="1296" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">temporário → landing.</text>
+<polyline points="578,1316 1076,1316" fill="none" stroke="#CED9E6" stroke-width="2" stroke-linejoin="round"/>
+<text x="578" y="1359" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="23" font-weight="700" fill="#087E83">origem=raw (default)</text>
+<text x="578" y="1394" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="27" font-weight="400" fill="#162B46">executar_ingestao()</text>
+<text x="578" y="1445" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#162B46">Origem e destino usam a própria landing</text>
+<text x="578" y="1480" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#162B46">por padrão. Arquivos existentes são</text>
+<text x="578" y="1515" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#162B46">registrados como ja_existia.</text>
+<rect x="1160" y="790" width="410" height="790" rx="22" fill="#FFFFFF" stroke="#CED9E6" stroke-width="2"/>
+<rect x="1182" y="812" width="48" height="45" rx="12" fill="#E7F5F3" stroke="none" stroke-width="2"/>
+<text x="1193" y="842" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="22" font-weight="700" fill="#087E83">03</text>
+<text x="1248" y="851" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="34" font-weight="700" fill="#162B46">Landing</text>
+<polyline points="1186,884 1544,884" fill="none" stroke="#087E83" stroke-width="3" stroke-linejoin="round"/>
+<text x="1186" y="939" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="23" font-weight="700" fill="#087E83">VOLUME UC</text>
+<text x="1186" y="974" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="28" font-weight="400" fill="#162B46">/Volumes/</text>
+<text x="1186" y="1013" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="28" font-weight="400" fill="#162B46">case_ifood/</text>
+<text x="1186" y="1052" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="28" font-weight="400" fill="#162B46">landing/files</text>
+<polyline points="1186,1083 1544,1083" fill="none" stroke="#CED9E6" stroke-width="2" stroke-linejoin="round"/>
+<text x="1186" y="1133" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="29" font-weight="700" fill="#162B46">Parquet mensal</text>
+<text x="1186" y="1172" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="24" font-weight="400" fill="#162B46">yellow_tripdata_</text>
+<text x="1186" y="1205" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="24" font-weight="400" fill="#162B46">2023-*.parquet</text>
+<text x="1186" y="1238" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="24" font-weight="400" fill="#162B46"></text>
+<text x="1186" y="1271" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="24" font-weight="400" fill="#162B46">green_tripdata_</text>
+<text x="1186" y="1304" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="24" font-weight="400" fill="#162B46">2023-*.parquet</text>
+<text x="1186" y="1367" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">glob avaliado ao construir o</text>
+<text x="1186" y="1404" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">pipeline.</text>
+<text x="1186" y="1452" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#52657B">Os widgets filtram a ingestão; o</text>
+<text x="1186" y="1487" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#52657B">glob da pipeline continua fixo</text>
+<text x="1186" y="1522" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#52657B">em 2023.</text>
+<rect x="1630" y="790" width="570" height="790" rx="22" fill="#FFFFFF" stroke="#CED9E6" stroke-width="2"/>
+<rect x="1652" y="812" width="48" height="45" rx="12" fill="#FBF0E5" stroke="none" stroke-width="2"/>
+<text x="1663" y="842" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="22" font-weight="700" fill="#A8622D">04</text>
+<text x="1718" y="851" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="34" font-weight="700" fill="#162B46">Bronze</text>
+<polyline points="1656,884 2174,884" fill="none" stroke="#A8622D" stroke-width="3" stroke-linejoin="round"/>
+<text x="1656" y="936" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="29" font-weight="400" fill="#162B46">bronze.green_trips</text>
+<text x="1656" y="975" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="29" font-weight="400" fill="#162B46">bronze.yellow_trips</text>
+<text x="1656" y="1030" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="23" font-weight="700" fill="#A8622D">STREAMING TABLES</text>
+<text x="1656" y="1063" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="25" font-weight="400" fill="#162B46">dp.create_streaming_table()</text>
+<text x="1656" y="1111" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="25" font-weight="400" fill="#162B46">_criar_fluxo_arquivo()</text>
+<text x="1656" y="1146" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="25" font-weight="400" fill="#162B46">@dp.append_flow(once=True)</text>
+<text x="1656" y="1204" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">Um fluxo por arquivo; leitura batch com</text>
+<text x="1656" y="1240" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">spark.read parquet.</text>
+<polyline points="1656,1260 2174,1260" fill="none" stroke="#CED9E6" stroke-width="2" stroke-linejoin="round"/>
+<text x="1656" y="1307" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">Cast para schema_bronze; nomes</text>
+<text x="1656" y="1343" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">normalizados sem diferença de caixa; colunas</text>
+<text x="1656" y="1379" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">ausentes → NULL.</text>
+<text x="1656" y="1420" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="27" font-weight="400" fill="#A8622D">+ _arquivo_origem</text>
+<text x="1656" y="1458" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="27" font-weight="400" fill="#A8622D">+ _ingestao_ts</text>
+<text x="1656" y="1515" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#52657B">Dados anteriores às regras de descarte da</text>
+<text x="1656" y="1547" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#52657B">silver.</text>
+<rect x="2258" y="790" width="610" height="790" rx="22" fill="#FFFFFF" stroke="#CED9E6" stroke-width="2"/>
+<rect x="2280" y="812" width="48" height="45" rx="12" fill="#EAF1F9" stroke="none" stroke-width="2"/>
+<text x="2291" y="842" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="22" font-weight="700" fill="#466B91">05</text>
+<text x="2346" y="851" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="34" font-weight="700" fill="#162B46">Silver</text>
+<polyline points="2284,884 2842,884" fill="none" stroke="#466B91" stroke-width="3" stroke-linejoin="round"/>
+<text x="2284" y="936" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="29" font-weight="400" fill="#162B46">silver.green_trips</text>
+<text x="2284" y="975" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="29" font-weight="400" fill="#162B46">silver.yellow_trips</text>
+<text x="2284" y="1020" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="25" font-weight="400" fill="#162B46">_criar_silver()</text>
+<text x="2284" y="1054" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="25" font-weight="400" fill="#162B46">@dp.materialized_view</text>
+<text x="2284" y="1105" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#162B46">xxhash64(chave original) → trip_id; mapeamento,</text>
+<text x="2284" y="1140" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#162B46">timestamps e taxi_type; dropDuplicates(trip_id).</text>
+<polyline points="2284,1160 2842,1160" fill="none" stroke="#CED9E6" stroke-width="2" stroke-linejoin="round"/>
+<text x="2284" y="1196" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="24" font-weight="400" fill="#466B91">_expectations_do_contrato()</text>
+<text x="2284" y="1245" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="23" font-weight="700" fill="#A0443C">DROP · expect_all_or_drop</text>
+<text x="2284" y="1286" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#162B46">Obrigatórias: vendor, total, pickup e dropoff.</text>
+<text x="2284" y="1321" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#162B46">Validade + consistência; pickup de 01/jan a</text>
+<text x="2284" y="1356" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#162B46">01/jun/2023 (fim exclusivo).</text>
+<text x="2284" y="1402" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="23" font-weight="700" fill="#466B91">WARN · expect_all</text>
+<text x="2284" y="1443" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#162B46">passenger_count nulo: registro mantido. Faixa</text>
+<text x="2284" y="1478" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#162B46">válida: NULL ou 0–8.</text>
+<text x="2284" y="1516" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="25" font-weight="400" fill="#52657B">cluster_by_auto=True</text>
+<rect x="2926" y="790" width="610" height="790" rx="22" fill="#FFFFFF" stroke="#CED9E6" stroke-width="2"/>
+<rect x="2948" y="812" width="48" height="45" rx="12" fill="#FBF5DB" stroke="none" stroke-width="2"/>
+<text x="2959" y="842" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="22" font-weight="700" fill="#947013">06</text>
+<text x="3014" y="851" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="34" font-weight="700" fill="#162B46">Gold</text>
+<polyline points="2952,884 3510,884" fill="none" stroke="#947013" stroke-width="3" stroke-linejoin="round"/>
+<text x="2952" y="936" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="29" font-weight="400" fill="#162B46">gold.trips_consolidado</text>
+<text x="2952" y="978" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="24" font-weight="400" fill="#947013">_criar_gold_consolidado()</text>
+<text x="2952" y="1028" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#162B46">green → yellow; unionByName com</text>
+<text x="2952" y="1063" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#162B46">allowMissingColumns=True.</text>
+<polyline points="2952,1081 3510,1081" fill="none" stroke="#CED9E6" stroke-width="2" stroke-linejoin="round"/>
+<text x="2952" y="1119" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="29" font-weight="400" fill="#162B46">gold.trips_diario</text>
+<text x="2952" y="1162" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="25" font-weight="400" fill="#947013">_criar_gold_agregado()</text>
+<text x="2952" y="1203" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="24" font-weight="400" fill="#162B46">Consolidado → groupBy:</text>
+<text x="2952" y="1236" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="24" font-weight="400" fill="#162B46">to_date(pickup_datetime)</text>
+<text x="2952" y="1269" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="24" font-weight="400" fill="#162B46">as data_corrida, taxi_type</text>
+<text x="2952" y="1312" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="24" font-weight="400" fill="#162B46">qtd_corridas: count(*)</text>
+<text x="2952" y="1345" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="24" font-weight="400" fill="#162B46">media_total_amount: avg</text>
+<text x="2952" y="1378" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="24" font-weight="400" fill="#162B46">media_passageiros: avg</text>
+<text x="2952" y="1411" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="24" font-weight="400" fill="#162B46">soma_distancia_km: sum</text>
+<text x="2952" y="1464" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="24" font-weight="400" fill="#52657B">MVs; auto clustering no consolidado; diário por</text>
+<text x="2952" y="1497" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="24" font-weight="400" fill="#52657B">data_corrida.</text>
+<polyline points="494,1100 552,1100" fill="none" stroke="#162B46" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="552,1100 538.6950761583107,1106.9266876331224 538.6950761583107,1093.0733123668776" fill="#162B46"/>
+<polyline points="1102,1100 1160,1100" fill="none" stroke="#162B46" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="1160,1100 1146.6950761583107,1106.9266876331224 1146.6950761583107,1093.0733123668776" fill="#162B46"/>
+<polyline points="1570,1100 1630,1100" fill="none" stroke="#162B46" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="1630,1100 1616.6950761583107,1106.9266876331224 1616.6950761583107,1093.0733123668776" fill="#162B46"/>
+<polyline points="2200,1100 2258,1100" fill="none" stroke="#162B46" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="2258,1100 2244.6950761583107,1106.9266876331224 2244.6950761583107,1093.0733123668776" fill="#162B46"/>
+<polyline points="2868,1100 2926,1100" fill="none" stroke="#162B46" stroke-width="5" stroke-linejoin="round"/>
+<polygon points="2926,1100 2912.6950761583107,1106.9266876331224 2912.6950761583107,1093.0733123668776" fill="#162B46"/>
+<text x="554" y="1633" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#52657B">Todas as tabelas bronze / silver / gold usam o catálogo case_ifood. MVs = materialized views.</text>
+<polyline points="827,1580 827,1730 580,1730 580,1830" fill="none" stroke="#7051A3" stroke-width="4" stroke-linejoin="round"/>
+<polygon points="580,1830 573.0733123668778,1816.6950761583107 586.9266876331222,1816.6950761583107" fill="#7051A3"/>
+<text x="852" y="1735" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#7051A3">log por arquivo</text>
+<polyline points="2563,1580 2563,1730 1860,1730 1860,1830" fill="none" stroke="#7051A3" stroke-width="4" stroke-linejoin="round"/>
+<polygon points="1860,1830 1853.0733123668776,1816.6950761583107 1866.9266876331224,1816.6950761583107" fill="#7051A3"/>
+<text x="1890" y="1779" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#7051A3">leitura da silver após o pipeline</text>
+<text x="64" y="1794" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="27" font-weight="700" fill="#7051A3">OPERAÇÃO E QUALIDADE</text>
+<rect x="64" y="1830" width="1010" height="480" rx="22" fill="#FFFFFF" stroke="#CED9E6" stroke-width="2"/>
+<rect x="86" y="1852" width="48" height="45" rx="12" fill="#F0ECF8" stroke="none" stroke-width="2"/>
+<text x="97" y="1882" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="22" font-weight="700" fill="#7051A3">07</text>
+<text x="152" y="1891" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="34" font-weight="700" fill="#162B46">Log de ingestão</text>
+<polyline points="90,1924 1048,1924" fill="none" stroke="#7051A3" stroke-width="3" stroke-linejoin="round"/>
+<text x="90" y="1975" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="28" font-weight="400" fill="#162B46">case_ifood.governanca.log_ingestao</text>
+<text x="90" y="2035" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">Append por executar_ingestao() e baixar_da_fonte().</text>
+<text x="90" y="2085" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">Dataset, arquivo, fonte, tamanho, checksum, status, timestamp e mensagem.</text>
+<text x="90" y="2122" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">Estados: ok / ja_existia / erro.</text>
+<polyline points="90,2143 1048,2143" fill="none" stroke="#CED9E6" stroke-width="2" stroke-linejoin="round"/>
+<text x="90" y="2188" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#52657B">Skip: destino existente e não vazio. MD5 parcial dos primeiros 64 MiB; não é</text>
+<text x="90" y="2224" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#52657B">comparado para decidir o skip.</text>
+<rect x="1120" y="1830" width="1420" height="480" rx="22" fill="#FFFFFF" stroke="#CED9E6" stroke-width="2"/>
+<rect x="1142" y="1852" width="48" height="45" rx="12" fill="#F0ECF8" stroke="none" stroke-width="2"/>
+<text x="1153" y="1882" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="22" font-weight="700" fill="#7051A3">08</text>
+<text x="1208" y="1891" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="34" font-weight="700" fill="#162B46">Auditoria de qualidade · DAMA-DMBOK</text>
+<polyline points="1146,1924 2514,1924" fill="none" stroke="#7051A3" stroke-width="3" stroke-linejoin="round"/>
+<text x="1146" y="1976" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="29" font-weight="400" fill="#162B46">case_ifood.governanca.dq_resultados</text>
+<text x="1146" y="2021" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="25" font-weight="400" fill="#162B46">03_qualidade/qualidade_contratos.ipynb → listar_contratos()</text>
+<text x="1146" y="2077" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="27" font-weight="400" fill="#162B46">Completude · validade · unicidade · consistência · pontualidade (janela histórica).</text>
+<text x="1146" y="2122" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">Nulos: yellow ≤ 1%, green ≤ 5%; passenger_count: ≤ 5% / ≤ 10%.</text>
+<text x="1146" y="2165" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#162B46">_registrar() + _exemplos_violacoes() → PASS/FAIL, métrica e JSON com até 5 exemplos em falhas; append Delta.</text>
+<text x="1146" y="2209" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#7051A3">Qualquer FAIL lança Exception após gravar. Mede a silver já filtrada; não quantifica descartes da bronze.</text>
+<rect x="2586" y="1830" width="950" height="480" rx="22" fill="#FFFFFF" stroke="#6C7887" stroke-width="2" stroke-dasharray="11 8"/>
+<rect x="2608" y="1852" width="48" height="45" rx="12" fill="#EDF1F5" stroke="none" stroke-width="2"/>
+<text x="2619" y="1882" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="22" font-weight="700" fill="#6C7887">09</text>
+<text x="2674" y="1891" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="34" font-weight="700" fill="#162B46">Observabilidade declarada</text>
+<polyline points="2612,1924 3510,1924" fill="none" stroke="#6C7887" stroke-width="3" stroke-linejoin="round"/>
+<text x="2612" y="1975" font-family="Consolas, 'DejaVu Sans Mono', monospace" font-size="27" font-weight="400" fill="#162B46">case_ifood.governanca.obs_metricas</text>
+<text x="2612" y="2034" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="26" font-weight="400" fill="#162B46">criar_tabelas_governanca() cria a tabela Delta de métricas.</text>
+<polyline points="2612,2055 3510,2055" fill="none" stroke="#CED9E6" stroke-width="2" stroke-linejoin="round"/>
+<text x="2612" y="2104" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="700" fill="#6C7887">Escritor / coletor não localizado no checkout.</text>
+<text x="2612" y="2152" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#52657B">Freshness, contagens e leitura do event log são citados na documentação; o</text>
+<text x="2612" y="2188" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#52657B">motor 04_observabilidade não está versionado aqui.</text>
+<text x="64" y="2377" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="700" fill="#52657B">LIMITES DA REPRESENTAÇÃO</text>
+<rect x="64" y="2396" width="1114" height="220" rx="18" fill="#FFFFFF" stroke="#CED9E6" stroke-width="2" stroke-dasharray="11 8"/>
+<text x="88" y="2443" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="700" fill="#162B46">Orquestração e consumo</text>
+<text x="88" y="2487" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="24" font-weight="400" fill="#52657B">O Job de ingestão → pipeline → qualidade → observabilidade → segurança é descrito no README;</text>
+<text x="88" y="2520" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="24" font-weight="400" fill="#52657B">sua definição não está no repo. 04/05/06 também estão ausentes. SQL/BI é consumo previsto.</text>
+<rect x="1210" y="2396" width="1114" height="220" rx="18" fill="#FFFFFF" stroke="#CED9E6" stroke-width="2" stroke-dasharray="11 8"/>
+<text x="1234" y="2443" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="700" fill="#162B46">Rastreabilidade e segurança</text>
+<text x="1234" y="2487" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="24" font-weight="400" fill="#52657B">_arquivo_origem e _ingestao_ts permanecem apenas na bronze. owner, domínio, tags e PII são</text>
+<text x="1234" y="2520" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="24" font-weight="400" fill="#52657B">declarados nos YAML; aplicação de GRANTs e tags não foi localizada.</text>
+<rect x="2356" y="2396" width="1180" height="220" rx="18" fill="#FFFFFF" stroke="#CED9E6" stroke-width="2" stroke-dasharray="11 8"/>
+<text x="2380" y="2443" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="28" font-weight="700" fill="#162B46">Semântica que importa</text>
+<text x="2380" y="2487" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="24" font-weight="400" fill="#52657B">Deduplicação por dataset na silver; a gold apenas une. Janela contratual fixa em jan–mai/2023.</text>
+<text x="2380" y="2520" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="24" font-weight="400" fill="#52657B">soma_distancia_km soma trip_distance sem conversão de unidade no código; médias ignoram NULL.</text>
+<text x="64" y="2680" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="25" font-weight="400" fill="#52657B">Base: código Python, notebooks e 3 contratos YAML  ·  referências e reprodução no README</text>
+<text x="64" y="2716" font-family="'Segoe UI', 'DejaVu Sans', sans-serif" font-size="24" font-weight="400" fill="#52657B">Análise estática do checkout; execução, configuração do Job e estado do workspace Databricks não foram verificados.</text></svg>
