@@ -12,7 +12,7 @@ from pyspark import pipelines as dp
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 
-CONTRACTS_DIR = "/Workspace/Users/alexvalsechibosque@gmail.com/case_ifood/contracts"
+CONTRACTS_DIR = "/Workspace/Repos/alexvalsechibosque@gmail.com/case-ifood/contracts"
 
 
 def _carregar_contratos():
@@ -190,6 +190,8 @@ for _contrato in CONTRATOS:
             name=nome_validacao,
             private=True,
             comment=f"[privada] {comentario} Avalia regras do contrato e marca violações.",
+            # colunas _orig_* herdadas da bronze usam timestamp_ntz
+            table_properties={"delta.feature.timestampNtz": "supported"},
         )
         @dp.expect_all(drops)
         @dp.expect_all(warns)
@@ -221,6 +223,8 @@ for _contrato in CONTRATOS:
             name=nome_quarentena,
             comment=f"[quarentena] {comentario} Linhas rejeitadas e duplicatas da Silver.",
             cluster_by_auto=True,
+            # colunas _orig_* herdadas da bronze usam timestamp_ntz
+            table_properties={"delta.feature.timestampNtz": "supported"},
         )
         def quarentena():
             df = spark.read.table(nome_validacao)
