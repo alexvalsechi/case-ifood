@@ -12,7 +12,7 @@ from pyspark import pipelines as dp
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 
-CONTRACTS_DIR = "/Workspace/Users/alexvalsechibosque@gmail.com/case_ifood/contracts"
+CONTRACTS_DIR = "/Workspace/Repos/alexvalsechibosque@gmail.com/case-ifood/contracts"
 
 
 def _carregar_contratos():

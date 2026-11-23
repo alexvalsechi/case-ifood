@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 import yaml
 
 # Caminho base do projeto no workspace
-BASE_PATH = "/Workspace/Users/alexvalsechibosque@gmail.com/case_ifood"
+BASE_PATH = "/Workspace/Repos/alexvalsechibosque@gmail.com/case-ifood"
 CONTRACTS_DIR = f"{BASE_PATH}/contracts"
 
 
