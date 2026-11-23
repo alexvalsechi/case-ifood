@@ -27,6 +27,23 @@ def _carregar_contratos():
 CONTRATOS = _carregar_contratos()
 
 
+def _carregar_contratos_referencia():
+    """Carrega dimensões de referência (lookup externo e dicionários versionados)."""
+    diretorio = os.path.join(CONTRACTS_DIR, "references")
+    contratos = []
+    if not os.path.isdir(diretorio):
+        return contratos
+    for nome in sorted(os.listdir(diretorio)):
+        if nome.endswith(".yml"):
+            with open(os.path.join(diretorio, nome), "r", encoding="utf-8") as fh:
+                documento = yaml.safe_load(fh)
+                contratos.extend(documento.get("dimensoes", [documento]))
+    return contratos
+
+
+CONTRATOS_REFERENCIA = _carregar_contratos_referencia()
+
+
 def _expectations_do_contrato(contrato):
     """Deriva expectations do SDP das regras declaradas no contrato."""
     drops = {}
@@ -227,6 +244,55 @@ for _contrato in CONTRATOS:
         _mapeamento, _chave, _taxi_type, _drops, _warns, _comentario,
     )
 
+# ------------------------------------------------- dimensões de referência ---
+# Os lookups são snapshots versionados em landing e publicados como Bronze e
+# Silver. Dicionários pequenos ficam declarados no contrato; lookups externos
+# são carregados como CSV no Volume indicado.
+for _ref in CONTRATOS_REFERENCIA:
+    _nome_bronze = _ref["destinos"]["bronze"]
+    _nome_silver = _ref["destinos"]["silver"]
+    _descricao = _ref["descricao"].strip()
+    _colunas = _ref["colunas"]
+    _tipo_fonte = _ref["fonte"]["tipo"]
+
+    def _criar_dimensao_referencia(ref, nome_bronze, nome_silver, descricao,
+                                   colunas, tipo_fonte):
+        @dp.materialized_view(
+            name=nome_bronze,
+            comment=f"[bronze] [referência] {descricao}",
+        )
+        def bronze_referencia():
+            if tipo_fonte == "volume_csv":
+                return (
+                    spark.read.option("header", True)
+                    .option("inferSchema", False)
+                    .option("encoding", "UTF-8")
+                    .csv(ref["fonte"]["path"])
+                )
+            linhas = ref["fonte"]["linhas"]
+            schema = " ".join(f"`{c['nome']}` {c['tipo']}" for c in colunas)
+            return spark.createDataFrame(linhas, schema=schema)
+
+        @dp.materialized_view(
+            name=nome_silver,
+            comment=f"[silver] [dimensão de referência] {descricao}",
+        )
+        def silver_referencia():
+            df = spark.read.table(nome_bronze)
+            selecionadas = [
+                F.col(c["origem"]).cast(c["tipo"]).alias(c["nome"])
+                for c in colunas
+            ]
+            return df.select(*selecionadas).dropDuplicates(
+                [ref["chave"]]
+            )
+
+        return bronze_referencia, silver_referencia
+
+    _criar_dimensao_referencia(
+        _ref, _nome_bronze, _nome_silver, _descricao, _colunas, _tipo_fonte
+    )
+
 # ------------------------------------------------------------------ gold -----
 # Visões de consumo geradas a partir dos contratos de gold em contracts/gold/:
 # cada YAML declara os membros (datasets de ingestão a unificar) e os agregados
@@ -261,6 +327,12 @@ def _carregar_contratos_gold(silver_por_dataset):
                         f"'{agregado['nome']}': função '{medida['funcao']}' não "
                         f"suportada (permitidas: {list(_FUNCOES_AGREGACAO)})"
                     )
+        for enrich in contrato.get("enriquecimentos", []):
+            if enrich["dimensao"] not in {r["destinos"]["silver"] for r in CONTRATOS_REFERENCIA}:
+                raise ValueError(
+                    f"Contrato de gold '{nome_arquivo}': dimensão não resolvida: "
+                    f"{enrich['dimensao']}"
+                )
         contratos_gold.append(contrato)
     return contratos_gold
 
@@ -299,18 +371,39 @@ for _contrato_gold in CONTRATOS_GOLD:
     if _contrato_gold.get("cluster_by_auto"):
         _kwargs_gold["cluster_by_auto"] = True
 
-    def _criar_gold_consolidado(nome, silvers, kwargs):
+    _enriquecimentos = _contrato_gold.get("enriquecimentos", [])
+
+    def _criar_gold_consolidado(nome, silvers, kwargs, enrichments):
         @dp.materialized_view(name=nome, **kwargs)
         def consolidado():
             dfs = [spark.read.table(t) for t in silvers]
             resultado = dfs[0]
             for df in dfs[1:]:
                 resultado = resultado.unionByName(df, allowMissingColumns=True)
+            for enrich in enrichments:
+                dim = spark.read.table(enrich["dimensao"]).alias("d")
+                fato = resultado.alias("f")
+                chave_fato = enrich["chave_fato"]
+                chave_dim = enrich["chave_dimensao"]
+                # IDs numéricos variam entre bigint e double (ex.: 1 x 1.0).
+                # Normalizar somente a expressão de join preserva as chaves.
+                condicao = F.col(f"f.{chave_fato}").cast("long") == F.col(
+                    f"d.{chave_dim}"
+                ).cast("long")
+                colunas_dim = [
+                    F.col(f"d.{c['origem']}").alias(c["alias"])
+                    for c in enrich["colunas"]
+                ]
+                resultado = fato.join(dim, condicao, "left").select(
+                    "f.*", *colunas_dim
+                )
             return resultado
 
         return consolidado
 
-    _criar_gold_consolidado(_nome_gold, _silvers, _kwargs_gold)
+    _criar_gold_consolidado(
+        _nome_gold, _silvers, _kwargs_gold, _enriquecimentos
+    )
 
     for _agregado in _contrato_gold.get("agregados", []):
         _dimensoes = [_expressao_dimensao(d) for d in _agregado["agrupar_por"]]

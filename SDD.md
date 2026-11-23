@@ -18,10 +18,18 @@ contracts/gold/trips.yml  (contrato de GOLD)  ── lê os silvers ──▶│
 case_ifood.gold.<visao>    →  camada de consumo (SQL/BI)
 ```
 
-**Regra de ouro:** o pipeline `02_pipelines/pipeline_case_ifood.py` não contém nenhuma lógica específica de dataset. No startup ele lê todos os YAML de `contracts/` (ingestão) e `contracts/gold/` (gold) e **gera** as tabelas. Portanto:
+**Regra de ouro:** o pipeline `02_pipelines/pipeline_case_ifood.py` não contém lógica específica de dataset. No startup ele lê YAMLs de `contracts/` (ingestão), `contracts/references/` (dimensões) e `contracts/gold/` (gold) e **gera** as tabelas. Portanto:
 
 * Novo dataset = novo YAML em `contracts/`.
 * Nova visão de consumo = item novo em `agregados` (ou novo YAML) em `contracts/gold/`.
+* Nova dimensão de referência = declaração em `contracts/references/` e inclusão em `enriquecimentos` no contrato Gold que a consome.
+
+As dimensões pequenas (códigos e descrições) ficam versionadas em YAML e são
+materializadas em Bronze/Silver. O lookup de Taxi Zones vem do CSV oficial:
+execute `01_ingestao/atualizar_taxi_zone_lookup.py` no Databricks antes do
+update do pipeline. O bloco `enriquecimentos` do contrato Gold declara os
+`LEFT JOINs` e aliases das descrições. As chaves originais permanecem na Gold;
+chaves sem correspondência mantêm a corrida e recebem descrição nula.
 * Editar o `.py` é reservado a mudanças de comportamento **genérico** do motor (raro) — nunca para atender um dataset ou visão específica.
 
 ## 2. Contrato de ingestão (`contracts/*.yml`)
@@ -55,6 +63,7 @@ Referência viva: `contracts/gold/trips.yml`. Cada YAML declara **uma unificaç�
 | `nome` | Nome completo do consolidado | `case_ifood.gold.<nome>`; deve ser único entre todas as tabelas do projeto |
 | `descricao` | Contexto da visão | Vira o comentário da tabela (prefixado `[gold] `) |
 | `membros` | Lista de `dataset` de ingestão que compõem o consolidado | **A ordem importa**: o primeiro membro define o layout de colunas; os seguintes apenas acrescentam colunas próprias (`unionByName` com colunas ausentes). Membro inexistente = pipeline falha na carga com erro claro |
+| `enriquecimentos` | `LEFT JOIN`s com dimensões Silver | Cada item define tabela, chaves e colunas/aliases a projetar; mantém fatos sem correspondência |
 | `cluster_by_auto` | `true` habilita liquid clustering automático no consolidado | Alternativa: `cluster_by: [<colunas>]` |
 | `agregados[].nome` | Nome completo da MV agregada | `case_ifood.gold.<nome>`; único no projeto |
 | `agregados[].descricao` | Contexto | Vira comentário da tabela |

@@ -1,0 +1,87 @@
+# Dimensões TLC para enriquecer os fatos de 2023. Os dicionários são
+# versionados no Git; a Taxi Zone Lookup é um snapshot do CSV oficial.
+dimensoes:
+  - dataset: dim_taxi_zone
+    descricao: Lookup oficial que traduz IDs de Taxi Zone para borough e zona.
+    chave: LocationID
+    fonte:
+      tipo: volume_csv
+      path: /Volumes/case_ifood/landing/reference/taxi_zone_lookup.csv
+      url: https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv
+      versao: versionada_por_data_de_snapshot
+    destinos: {bronze: case_ifood.bronze.dim_taxi_zone, silver: case_ifood.silver.dim_taxi_zone}
+    colunas:
+      - {origem: LocationID, nome: LocationID, tipo: int}
+      - {origem: Borough, nome: Borough, tipo: string}
+      - {origem: Zone, nome: Zone, tipo: string}
+      - {origem: service_zone, nome: service_zone, tipo: string}
+
+  - dataset: dim_vendor
+    descricao: Dicionário TLC de empresas prestadoras do serviço de táxi.
+    chave: vendor_id
+    fonte:
+      tipo: linhas
+      versao: tlc_trip_dictionary_2023
+      url: https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_yellow.pdf
+      linhas:
+        - {vendor_id: 1, vendor_name: Creative Mobile Technologies}
+        - {vendor_id: 2, vendor_name: VeriFone Inc.}
+        - {vendor_id: 6, vendor_name: Myle Technologies}
+    destinos: {bronze: case_ifood.bronze.dim_vendor, silver: case_ifood.silver.dim_vendor}
+    colunas:
+      - {origem: vendor_id, nome: vendor_id, tipo: int}
+      - {origem: vendor_name, nome: vendor_name, tipo: string}
+
+  - dataset: dim_rate_code
+    descricao: Dicionário TLC do tipo de tarifa.
+    chave: rate_code_id
+    fonte:
+      tipo: linhas
+      versao: tlc_trip_dictionary_2023
+      url: https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_yellow.pdf
+      linhas:
+        - {rate_code_id: 1, rate_code_name: Tarifa padrão}
+        - {rate_code_id: 2, rate_code_name: JFK}
+        - {rate_code_id: 3, rate_code_name: Newark}
+        - {rate_code_id: 4, rate_code_name: Nassau ou Westchester}
+        - {rate_code_id: 5, rate_code_name: Tarifa negociada}
+        - {rate_code_id: 6, rate_code_name: Viagem em grupo}
+        - {rate_code_id: 99, rate_code_name: Desconhecido}
+    destinos: {bronze: case_ifood.bronze.dim_rate_code, silver: case_ifood.silver.dim_rate_code}
+    colunas:
+      - {origem: rate_code_id, nome: rate_code_id, tipo: int}
+      - {origem: rate_code_name, nome: rate_code_name, tipo: string}
+
+  - dataset: dim_payment_type
+    descricao: Dicionário TLC do método de pagamento.
+    chave: payment_type
+    fonte:
+      tipo: linhas
+      versao: tlc_trip_dictionary_2023
+      url: https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_yellow.pdf
+      linhas:
+        - {payment_type: 1, payment_type_name: Cartão de crédito}
+        - {payment_type: 2, payment_type_name: Dinheiro}
+        - {payment_type: 3, payment_type_name: Sem cobrança}
+        - {payment_type: 4, payment_type_name: Contestação}
+        - {payment_type: 5, payment_type_name: Desconhecido}
+        - {payment_type: 6, payment_type_name: Corrida anulada}
+    destinos: {bronze: case_ifood.bronze.dim_payment_type, silver: case_ifood.silver.dim_payment_type}
+    colunas:
+      - {origem: payment_type, nome: payment_type, tipo: int}
+      - {origem: payment_type_name, nome: payment_type_name, tipo: string}
+
+  - dataset: dim_trip_type
+    descricao: Dicionário TLC do tipo de despacho do Green Taxi.
+    chave: trip_type
+    fonte:
+      tipo: linhas
+      versao: tlc_trip_dictionary_2023
+      url: https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_green.pdf
+      linhas:
+        - {trip_type: 1, trip_type_name: Abordagem na rua}
+        - {trip_type: 2, trip_type_name: Despacho}
+    destinos: {bronze: case_ifood.bronze.dim_trip_type, silver: case_ifood.silver.dim_trip_type}
+    colunas:
+      - {origem: trip_type, nome: trip_type, tipo: int}
+      - {origem: trip_type_name, nome: trip_type_name, tipo: string}

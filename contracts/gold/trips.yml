@@ -14,6 +14,44 @@ membros: [green_trips, yellow_trips]
 
 cluster_by_auto: true
 
+# LEFT JOINs enriquecem os fatos mantendo todas as corridas e as chaves de
+# origem. Valores sem correspondência permanecem com descrição nula.
+enriquecimentos:
+  - dimensao: case_ifood.silver.dim_vendor
+    chave_fato: vendor_id
+    chave_dimensao: vendor_id
+    colunas:
+      - {origem: vendor_name, alias: vendor_name}
+  - dimensao: case_ifood.silver.dim_rate_code
+    chave_fato: rate_code_id
+    chave_dimensao: rate_code_id
+    colunas:
+      - {origem: rate_code_name, alias: rate_code_name}
+  - dimensao: case_ifood.silver.dim_payment_type
+    chave_fato: payment_type
+    chave_dimensao: payment_type
+    colunas:
+      - {origem: payment_type_name, alias: payment_type_name}
+  - dimensao: case_ifood.silver.dim_trip_type
+    chave_fato: trip_type
+    chave_dimensao: trip_type
+    colunas:
+      - {origem: trip_type_name, alias: trip_type_name}
+  - dimensao: case_ifood.silver.dim_taxi_zone
+    chave_fato: pickup_location_id
+    chave_dimensao: LocationID
+    colunas:
+      - {origem: Borough, alias: pickup_borough}
+      - {origem: Zone, alias: pickup_zone}
+      - {origem: service_zone, alias: pickup_service_zone}
+  - dimensao: case_ifood.silver.dim_taxi_zone
+    chave_fato: dropoff_location_id
+    chave_dimensao: LocationID
+    colunas:
+      - {origem: Borough, alias: dropoff_borough}
+      - {origem: Zone, alias: dropoff_zone}
+      - {origem: service_zone, alias: dropoff_service_zone}
+
 # Agregados derivados do consolidado (uma MV gold por item).
 agregados:
   - nome: case_ifood.gold.trips_diario
