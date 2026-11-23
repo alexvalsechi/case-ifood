@@ -5,36 +5,36 @@
 ## 1. Arquitetura em uma página
 
 ```text
-contracts/yellow_trips.yml, green_trips.yml  (contratos de INGESTÃO)
-        │  lidos pelo pipeline SDP 02_pipelines/pipeline_case_ifood.py
+src/contracts/yellow_trips.yml, green_trips.yml  (contratos de INGESTÃO)
+        │  lidos pelo pipeline SDP src/02_pipelines/pipeline_case_ifood.py
         ▼
 case_ifood.bronze.<dataset>   →  dados brutos + metadados (_arquivo_origem, _ingestao_ts)
         ▼
 case_ifood.silver.<dataset>  →  limpos, tipados, deduplicados (trip_id), expectations
         ▼  ┌─────────────────────────────────────────────────────────┐
-contracts/gold/trips.yml  (contrato de GOLD)  ── lê os silvers ──▶│ unificação (membros)     │
+src/contracts/gold/trips.yml  (contrato de GOLD)  ── lê os silvers ──▶│ unificação (membros)     │
         │                                                        │ + agregados declarativos │
         ▼                                                        └─────────────────────────┘
 case_ifood.gold.<visao>    →  camada de consumo (SQL/BI)
 ```
 
-**Regra de ouro:** o pipeline `02_pipelines/pipeline_case_ifood.py` não contém lógica específica de dataset. No startup ele lê YAMLs de `contracts/` (ingestão), `contracts/references/` (dimensões) e `contracts/gold/` (gold) e **gera** as tabelas. Portanto:
+**Regra de ouro:** o pipeline `src/02_pipelines/pipeline_case_ifood.py` não contém lógica específica de dataset. No startup ele lê YAMLs de `src/contracts/` (ingestão), `src/contracts/references/` (dimensões) e `src/contracts/gold/` (gold) e **gera** as tabelas. Portanto:
 
-* Novo dataset = novo YAML em `contracts/`.
-* Nova visão de consumo = item novo em `agregados` (ou novo YAML) em `contracts/gold/`.
-* Nova dimensão de referência = declaração em `contracts/references/` e inclusão em `enriquecimentos` no contrato Gold que a consome.
+* Novo dataset = novo YAML em `src/contracts/`.
+* Nova visão de consumo = item novo em `agregados` (ou novo YAML) em `src/contracts/gold/`.
+* Nova dimensão de referência = declaração em `src/contracts/references/` e inclusão em `enriquecimentos` no contrato Gold que a consome.
 
 As dimensões pequenas (códigos e descrições) ficam versionadas em YAML e são
 materializadas em Bronze/Silver. O lookup de Taxi Zones vem do CSV oficial:
-execute `01_ingestao/atualizar_taxi_zone_lookup.py` no Databricks antes do
+execute `src/01_ingestao/atualizar_taxi_zone_lookup.py` no Databricks antes do
 update do pipeline. O bloco `enriquecimentos` do contrato Gold declara os
 `LEFT JOINs` e aliases das descrições. As chaves originais permanecem na Gold;
 chaves sem correspondência mantêm a corrida e recebem descrição nula.
 * Editar o `.py` é reservado a mudanças de comportamento **genérico** do motor (raro) — nunca para atender um dataset ou visão específica.
 
-## 2. Contrato de ingestão (`contracts/*.yml`)
+## 2. Contrato de ingestão (`src/contracts/*.yml`)
 
-Referências vivas: `contracts/yellow_trips.yml` e `contracts/green_trips.yml`. Um arquivo por dataset, nome do arquivo = nome do dataset.
+Referências vivas: `src/contracts/yellow_trips.yml` e `src/contracts/green_trips.yml`. Um arquivo por dataset, nome do arquivo = nome do dataset.
 
 | Campo | Significado | Regras |
 | --- | --- | --- |
@@ -54,9 +54,9 @@ Referências vivas: `contracts/yellow_trips.yml` e `contracts/green_trips.yml`. 
 | `regras_qualidade.completude` / `pontualidade` / `unicidade` | Documentação DAMA-DMBOK | Completude e pontualidade são auditadas depois; a unicidade é aplicada na Silver por `trip_id`, com as duplicatas excedentes enviadas à quarentena |
 | `colunas_pii` / `tags` | Segurança e metadados | Alimentam os motores de segurança/governança |
 
-## 3. Contrato de gold (`contracts/gold/*.yml`)
+## 3. Contrato de gold (`src/contracts/gold/*.yml`)
 
-Referência viva: `contracts/gold/trips.yml`. Cada YAML declara **uma unificação** (o consolidado) e **N agregados** derivados dela. Cada agregado lê SEMPRE o consolidado do próprio contrato.
+Referência viva: `src/contracts/gold/trips.yml`. Cada YAML declara **uma unificação** (o consolidado) e **N agregados** derivados dela. Cada agregado lê SEMPRE o consolidado do próprio contrato.
 
 | Campo | Significado | Regras |
 | --- | --- | --- |
@@ -77,13 +77,13 @@ Diante de "quero uma visão / tabela nova na gold":
 
 ```text
 O dado já existe em algum silver (contrato de ingestão já criado)?
-├── NÃO  → criar contrato de INGESTÃO em contracts/ (seção 2).
+├── NÃO  → criar contrato de INGESTÃO em src/contracts/ (seção 2).
 │         Depois, se quiser consumo: ir para o ramo SIM.
 └── SIM  → A visão agrega dados JÁ unificados por um contrato de gold existente?
           ├── SIM  → EDITAR o contrato existente: adicionar um item em `agregados`
           │         (não cria arquivo novo; ex.: agrupar corridas por localidade
-          │          = novo agregado em contracts/gold/trips.yml).
-          └── NÃO  → CRIAR novo YAML em contracts/gold/ (unificação nova:
+          │          = novo agregado em src/contracts/gold/trips.yml).
+          └── NÃO  → CRIAR novo YAML em src/contracts/gold/ (unificação nova:
                     outros membros, grain diferente, ex.: pontos de táxi).
                     Um consolidado por grain — nunca misturar grains no
                                        mesmo consolidado.
@@ -128,10 +128,10 @@ Depois: montar o YAML, **mostrar ao usuário e confirmar**, e só então executa
 
 ## 8. Exemplo ponta a ponta — "visão que agrupa corridas por localidade"
 
-Diálogo esperado: IA pergunta nome (`corridas_por_localidade` sugerido), dimensão (`pickup_location_id`; usuário pode pedir também `taxi_type`), medidas (`qtd_corridas` count, `media_total_amount` avg) e clusterização (`pickup_location_id`). Como `trips` já unifica green+yellow, o caminho é **adicionar um agregado ao contrato existente** `contracts/gold/trips.yml`:
+Diálogo esperado: IA pergunta nome (`corridas_por_localidade` sugerido), dimensão (`pickup_location_id`; usuário pode pedir também `taxi_type`), medidas (`qtd_corridas` count, `media_total_amount` avg) e clusterização (`pickup_location_id`). Como `trips` já unifica green+yellow, o caminho é **adicionar um agregado ao contrato existente** `src/contracts/gold/trips.yml`:
 
 ```yaml
-# (item adicionado à lista `agregados` existente em contracts/gold/trips.yml —
+# (item adicionado à lista `agregados` existente em src/contracts/gold/trips.yml —
 #  o agregado trips_diario permanece intocado)
   - nome: case_ifood.gold.corridas_por_localidade
     descricao: >

@@ -9,7 +9,7 @@ import os
 import yaml
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CONTRATOS_DIR = os.path.join(RAIZ, "contracts")
+CONTRATOS_DIR = os.path.join(RAIZ, "src", "contracts")
 GOLD_DIR = os.path.join(CONTRATOS_DIR, "gold")
 REFS_ARQUIVO = os.path.join(CONTRATOS_DIR, "references", "dimensoes_tlc.yml")
 

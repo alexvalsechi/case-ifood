@@ -1,4 +1,4 @@
-﻿# Case iFood — Lakehouse NYC Taxi
+# Case iFood — Lakehouse NYC Taxi
 
 Pipeline Databricks para corridas **Yellow e Green Taxi**, orientado a contratos YAML e organizado nas camadas **Bronze → Silver → Gold**. Inclui dimensões TLC, quarentena, auditoria de qualidade DAMA-DMBOK e consultas SQL. O recorte do case é janeiro a maio de 2023.
 
@@ -17,7 +17,7 @@ O **Databricks Asset Bundle (DAB)** valida e publica os arquivos, a pipeline e o
 | `case_ifood_bootstrap` | Preparação inicial ou reposição dos arquivos | Cria catálogo, schemas, volumes e tabelas de governança; baixa os Parquets Yellow/Green e o lookup de Taxi Zones. |
 | `case_ifood_medallion` | Processamento dos arquivos disponíveis | Gera Bronze, Silver, dimensões e Gold a partir dos contratos. |
 | `case_ifood_update_e_qualidade` | Execução operacional | Executa `pipeline_update → qualidade_contratos → observabilidade_contratos`. |
-| `06_analises/consultas_gold.ipynb` | Consumo | Executa as consultas SQL do case; não é uma task dos jobs. |
+| `analysis/consultas_gold.ipynb` | Consumo | Executa as consultas SQL do case; não é uma task dos jobs. |
 
 O job operacional atualiza a pipeline primeiro. A auditoria avalia a Silver depois desse update; portanto, um FAIL interrompe as tasks seguintes, embora a Gold já tenha sido materializada. As cinco dimensões de referência alimentam seis `LEFT JOINs` na Gold, porque Taxi Zone é usada para embarque e desembarque.
 
@@ -65,7 +65,7 @@ databricks bundle deploy -t dev
 databricks bundle summary -t dev
 ```
 
-Os caminhos da biblioteca da pipeline e dos notebooks estão relativos aos YAML que os declaram. Os notebooks descobrem a raiz do projeto pelo caminho em que estão executando, permitindo localizar `00_config`, `01_ingestao` e `contracts` no checkout publicado pelo DAB. As tasks de notebook têm ambientes serverless e dependências declarados nos jobs; a pipeline usa serverless e declara `PyYAML` no ambiente do resource.
+Os caminhos da biblioteca da pipeline e dos notebooks estão relativos aos YAML que os declaram. Os notebooks descobrem o diretório `src/` pelo caminho em que estão executando e localizam seus módulos e contratos dentro dele. A pipeline recebe `${workspace.file_path}/src/contracts` pela configuração do DAB. As tasks de notebook têm ambientes serverless e dependências declarados nos jobs; a pipeline usa serverless e declara `PyYAML` no ambiente do resource.
 
 A configuração e os exemplos de caminhos estão na [documentação do DAB](https://docs.databricks.com/aws/en/dev-tools/bundles/settings) e nos [exemplos oficiais de bundles](https://docs.databricks.com/aws/en/dev-tools/bundles/examples).
 
@@ -79,7 +79,7 @@ databricks bundle run -t dev case_ifood_bootstrap
 
 O job cria os schemas `landing`, `bronze`, `silver`, `gold` e `governanca`; os volumes `landing.files` e `landing.reference`; e as tabelas de governança. Em seguida, baixa os cinco Parquets mensais de cada frota e o lookup oficial de Taxi Zones. O CSV passa por uma checagem de cabeçalho e é gravado com snapshot datado e manifesto SHA-256.
 
-O download dos Parquets é repetível: um arquivo já existente e não vazio é ignorado. Confira a saída e o `case_ifood.governanca.log_ingestao`; a checagem final do bootstrap avisa se faltarem meses. Os parâmetros e o job estão em [`bootstrap_ambiente.ipynb`](01_ingestao/bootstrap_ambiente.ipynb) e [`case_ifood_bootstrap.job.yml`](resources/case_ifood_bootstrap.job.yml).
+O download dos Parquets é repetível: um arquivo já existente e não vazio é ignorado. Confira a saída e o `case_ifood.governanca.log_ingestao`; a checagem final do bootstrap avisa se faltarem meses. Os parâmetros e o job estão em [`bootstrap_ambiente.ipynb`](src/01_ingestao/bootstrap_ambiente.ipynb) e [`case_ifood_bootstrap.job.yml`](resources/case_ifood_bootstrap.job.yml).
 
 ### 2.4. Validar e executar o processamento
 
@@ -121,7 +121,7 @@ LIMIT 24;
 
 Para conferir as métricas de observabilidade, consulte `case_ifood.governanca.obs_metricas`. Como reconciliação adicional, compare a contagem de linhas de `gold.trips_consolidado` com a soma de `qtd_corridas` em `gold.trips_diario`; essa conferência ainda é manual.
 
-O notebook [`consultas_gold.ipynb`](06_analises/consultas_gold.ipynb) responde às duas perguntas do case: média do valor `total_amount` por corrida e mês para Yellow Taxi; média de passageiros por hora do dia em maio para toda a frota.
+O notebook [`consultas_gold.ipynb`](analysis/consultas_gold.ipynb) responde às duas perguntas do case: média do valor `total_amount` por corrida e mês para Yellow Taxi; média de passageiros por hora do dia em maio para toda a frota.
 
 ## 3. Arquitetura detalhada
 
@@ -154,7 +154,7 @@ O notebook [`consultas_gold.ipynb`](06_analises/consultas_gold.ipynb) responde �
 | `case_ifood.silver.dim_trip_type` | Descrição do tipo de despacho Green. |
 | `case_ifood.silver.dim_taxi_zone` | Bairro, zona e zona de serviço para embarque e desembarque. |
 
-A declaração de enriquecimento e do agregado diário fica em [`contracts/gold/trips.yml`](contracts/gold/trips.yml). As regras e os schemas de ingestão estão em [`contracts/yellow_trips.yml`](contracts/yellow_trips.yml), [`contracts/green_trips.yml`](contracts/green_trips.yml) e [`contracts/references/dimensoes_tlc.yml`](contracts/references/dimensoes_tlc.yml).
+A declaração de enriquecimento e do agregado diário fica em [`src/contracts/gold/trips.yml`](src/contracts/gold/trips.yml). As regras e os schemas de ingestão estão em [`src/contracts/yellow_trips.yml`](src/contracts/yellow_trips.yml), [`src/contracts/green_trips.yml`](src/contracts/green_trips.yml) e [`src/contracts/references/dimensoes_tlc.yml`](src/contracts/references/dimensoes_tlc.yml).
 
 ## 4. Testes e qualidade
 
@@ -207,11 +207,11 @@ Os resultados ficam em `case_ifood.governanca.dq_resultados`; rejeições são c
 
 Para processar de novo os arquivos presentes, execute `case_ifood_update_e_qualidade`. A primeira task já atualiza a pipeline. Execute `case_ifood_bootstrap` sob demanda para repor arquivos ou atualizar o lookup de Taxi Zones. Os jobs não têm schedule configurado.
 
-O notebook individual [`ingestao_parametrizada.ipynb`](01_ingestao/ingestao_parametrizada.ipynb) permite escolher `taxi_type`, `ano`, `meses` e `origem`. O modo `url` baixa da origem TLC; no modo `raw`, o motor usa o volume de origem como destino padrão.
+O notebook individual [`ingestao_parametrizada.ipynb`](src/01_ingestao/ingestao_parametrizada.ipynb) permite escolher `taxi_type`, `ano`, `meses` e `origem`. O modo `url` baixa da origem TLC; no modo `raw`, o motor usa o volume de origem como destino padrão.
 
 ### Evoluir os dados
 
-Leia [`SDD.md`](SDD.md) antes de alterar contratos. Um novo dataset é declarado em `contracts/`; dimensões em `contracts/references/`; unificações, enriquecimentos e agregados em `contracts/gold/`. O pipeline consome esses contratos para os comportamentos genéricos já suportados.
+Leia [`SDD.md`](SDD.md) antes de alterar contratos. Um novo dataset é declarado em `src/contracts/`; dimensões em `src/contracts/references/`; unificações, enriquecimentos e agregados em `src/contracts/gold/`. O pipeline consome esses contratos para os comportamentos genéricos já suportados.
 
 ### Targets
 
@@ -233,19 +233,25 @@ Leia [`SDD.md`](SDD.md) antes de alterar contratos. Um novo dataset é declarado
 
 ```text
 case-ifood/
-├── 00_config/          # Motores genéricos e governança
-├── 01_ingestao/        # Bootstrap, ingestão parametrizada e lookup TLC
-├── 02_pipelines/       # Pipeline medallion orientada a contratos
-├── 03_qualidade/       # Auditoria DAMA
-├── 04_observabilidade/ # Métricas e event log
-├── 06_analises/        # Consultas SQL na Gold
-├── contracts/          # Ingestão, dimensões e consumo
-├── resources/          # Pipeline e jobs DAB
-├── tests/              # Testes Python sem Spark
-├── docs/arquitetura/   # Diagramas e gerador
-├── .github/workflows/  # CI e validação condicional do DAB
-├── databricks.yml      # Bundle e targets dev/prod
-└── SDD.md              # Guia de contratos
+├── src/                    # Código fonte e contratos da solução
+│   ├── 00_config/          # Motores genéricos e governança
+│   ├── 01_ingestao/        # Bootstrap, ingestão parametrizada e lookup TLC
+│   ├── 02_pipelines/       # Pipeline medallion orientada a contratos
+│   ├── 03_qualidade/       # Auditoria DAMA
+│   ├── 04_observabilidade/ # Métricas e event log
+│   └── contracts/          # Contratos de ingestão, dimensões e consumo
+│       ├── gold/
+│       └── references/
+├── analysis/               # Notebook com as respostas do case
+│   └── consultas_gold.ipynb
+├── resources/              # Pipeline e jobs DAB
+├── tests/                  # Testes Python sem Spark
+├── docs/                   # Diagramas e geradores
+├── .github/                # CI e validação condicional do DAB
+├── README.md
+├── SDD.md                  # Guia de contratos
+├── databricks.yml          # Bundle e targets dev/prod
+└── requirements-dev.txt
 ```
 
 Para gerar novamente os dois diagramas de arquitetura, com Pillow disponível:

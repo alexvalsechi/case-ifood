@@ -8,6 +8,8 @@ import sys
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-for caminho in (RAIZ, os.path.join(RAIZ, "00_config"), os.path.join(RAIZ, "01_ingestao")):
+SRC = os.path.join(RAIZ, "src")
+
+for caminho in (RAIZ, SRC, os.path.join(SRC, "00_config"), os.path.join(SRC, "01_ingestao")):
     if caminho not in sys.path:
         sys.path.insert(0, caminho)

@@ -15,7 +15,7 @@ from pyspark.sql.window import Window
 
 # Contratos localizados de forma PORTÁVEL (sem path absoluto hardcoded):
 # 1) configuração do pipeline 'case_ifood.contracts_dir' — setável via
-#    settings ou DAB por target (ex.: ${workspace.file_path}/contracts);
+#    settings ou DAB por target (ex.: ${workspace.file_path}/src/contracts);
 # 2) fallback: o root_path do pipeline entra no sys.path; o pai dele é a
 #    raiz do projeto, que contém contracts/.
 # (O runtime do SDP executa o código de uma cópia efêmera, sem __file__.)
@@ -33,7 +33,7 @@ def _localizar_contracts():
                 return candidato
     raise RuntimeError(
         "contracts/ não localizado: configure 'case_ifood.contracts_dir' no "
-        "pipeline (settings/DAB) ou rode com root_path=<raiz>/02_pipelines."
+        "pipeline (settings/DAB) ou rode com root_path=<raiz>/src/02_pipelines."
     )
 
 

@@ -12,7 +12,7 @@ resources:
         - task_key: bootstrap_ambiente
           environment_key: default
           notebook_task:
-            notebook_path: ../01_ingestao/bootstrap_ambiente.ipynb
+            notebook_path: ../src/01_ingestao/bootstrap_ambiente.ipynb
             base_parameters:
               catalogo: case_ifood
               ano: "2023"

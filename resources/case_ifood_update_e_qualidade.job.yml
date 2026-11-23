@@ -18,7 +18,7 @@ resources:
             - task_key: pipeline_update
           environment_key: default
           notebook_task:
-            notebook_path: ../03_qualidade/qualidade_contratos.ipynb
+            notebook_path: ../src/03_qualidade/qualidade_contratos.ipynb
             base_parameters:
               catalogo: case_ifood
               datasets: ""
@@ -27,7 +27,7 @@ resources:
             - task_key: qualidade_contratos
           environment_key: default
           notebook_task:
-            notebook_path: ../04_observabilidade/observabilidade_contratos.ipynb
+            notebook_path: ../src/04_observabilidade/observabilidade_contratos.ipynb
             base_parameters:
               catalogo: case_ifood
               pipeline_id: ${resources.pipelines.case_ifood_medallion.id}

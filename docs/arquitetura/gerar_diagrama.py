@@ -22,18 +22,21 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = Path(__file__).resolve().parent
 WIDTH, HEIGHT = 3600, 3000
 SOURCES = [
-    "00_config/motores.py",
-    "01_ingestao/ingestao_parametrizada.ipynb",
-    "02_pipelines/pipeline_case_ifood.py",
-    "03_qualidade/qualidade_contratos.ipynb",
-    "contracts/green_trips.yml",
-    "contracts/yellow_trips.yml",
-    "contracts/gold/trips.yml",
-    "contracts/references/dimensoes_tlc.yml",
-    "01_ingestao/atualizar_taxi_zone_lookup.py",
-    "06_analises/consultas_gold.ipynb",
+    "src/00_config/motores.py",
+    "src/01_ingestao/bootstrap_ambiente.ipynb",
+    "src/01_ingestao/ingestao_parametrizada.ipynb",
+    "src/02_pipelines/pipeline_case_ifood.py",
+    "src/03_qualidade/qualidade_contratos.ipynb",
+    "src/04_observabilidade/observabilidade_contratos.ipynb",
+    "src/contracts/green_trips.yml",
+    "src/contracts/yellow_trips.yml",
+    "src/contracts/gold/trips.yml",
+    "src/contracts/references/dimensoes_tlc.yml",
+    "src/01_ingestao/atualizar_taxi_zone_lookup.py",
+    "analysis/consultas_gold.ipynb",
     "databricks.yml",
     "resources/case_ifood_medallion.pipeline.yml",
+    "resources/case_ifood_bootstrap.job.yml",
     "resources/case_ifood_update_e_qualidade.job.yml",
     ".github/workflows/tests.yml",
     "tests/test_contratos.py",
@@ -192,10 +195,10 @@ def load_yaml(path):
 
 
 def model():
-    green = load_yaml("contracts/green_trips.yml")
-    yellow = load_yaml("contracts/yellow_trips.yml")
-    gold = load_yaml("contracts/gold/trips.yml")
-    refs = load_yaml("contracts/references/dimensoes_tlc.yml")["dimensoes"]
+    green = load_yaml("src/contracts/green_trips.yml")
+    yellow = load_yaml("src/contracts/yellow_trips.yml")
+    gold = load_yaml("src/contracts/gold/trips.yml")
+    refs = load_yaml("src/contracts/references/dimensoes_tlc.yml")["dimensoes"]
     counts = {}
     for name in ("contratos", "lookup_guard", "dab"):
         tree = ast.parse((ROOT / f"tests/test_{name}.py").read_text(encoding="utf-8"))
@@ -274,14 +277,14 @@ def architecture(data):
 
     job = Card(c, 2364, 270, 1172, 320, "03", "Job operacional", C["purple"], C["purple_bg"])
     job.p("case_ifood_update_e_qualidade", 28, style="mono", line=39, gap=9)
-    job.p("pipeline_update → qualidade_contratos", 29, C["purple"], "bold", line=40, gap=9)
-    job.p("Update normal; auditoria depende do update. Ingestão e lookup são executados à parte.", 27, line=37)
+    job.p("pipeline → qualidade → observabilidade", 29, C["purple"], "bold", line=40, gap=9)
+    job.p("Update normal; tasks sequenciais. O job de bootstrap prepara ingestão e lookup antes da operação.", 27, line=37)
     c.path([(2304, 430), (2364, 430)], C["teal"], 4, dashed=True, arrow=True)
 
     band(c, 64, 630, 1706, "CONTRATOS DE INGESTÃO E REFERÊNCIAS",
-         "contracts/*.yml + contracts/references/dimensoes_tlc.yml\nFonte, schema, mapeamento, chave, regras e dimensões Bronze/Silver.")
+         "src/contracts/*.yml + src/contracts/references/dimensoes_tlc.yml\nFonte, schema, mapeamento, chave, regras e dimensões Bronze/Silver.")
     band(c, 1810, 630, 1726, "CONTRATO DE CONSUMO · GOLD",
-         "contracts/gold/trips.yml\nMembros, seis enriquecimentos por LEFT JOIN, agrupamentos e medidas.")
+         "src/contracts/gold/trips.yml\nMembros, seis enriquecimentos por LEFT JOIN, agrupamentos e medidas.")
 
     c.text(64, 854, "FLUXO DE DADOS  ·  Lakeflow Spark Declarative Pipelines", 29, C["muted"], "bold")
     c.text(64, 896, "Pipeline serverless + Photon  /  execução disparada por update  /  MVs = materialized views", 26, C["muted"])
@@ -294,7 +297,7 @@ def architecture(data):
     src.rule()
     src.p("/Volumes/case_ifood/\nlanding/files", 27, C["teal"], "mono", line=38)
     src.p("Glob dos contratos: 2023.\nJanela válida: jan–mai/2023.", 27, line=38)
-    src.p("Preparação da landing fora do Job versionado.", 25, C["muted"], line=35)
+    src.p("Preparação da landing pelo job case_ifood_bootstrap.", 25, C["muted"], line=35)
 
     br = Card(c, 734, 930, 610, 650, "05", "Bronze", C["bronze"], C["bronze_bg"])
     br.p("bronze.yellow_trips\nbronze.green_trips", 28, style="mono", line=39)
@@ -325,7 +328,7 @@ def architecture(data):
     go.p("MVs; clustering automático no consolidado e por data no diário.", 25, C["muted"], line=35)
 
     co = Card(c, 2894, 930, 642, 650, "08", "Consumo SQL", C["gold"], C["gold_bg"])
-    co.p("06_analises/\nconsultas_gold.ipynb", 27, style="mono", line=38)
+    co.p("analysis/\nconsultas_gold.ipynb", 27, style="mono", line=38)
     co.p("Lê gold.trips_consolidado.", 27, line=38)
     co.rule()
     co.p("Média de total_amount por mês para Yellow Taxi.", 29, line=40)
@@ -347,7 +350,7 @@ def architecture(data):
     rf.p("Vendor, tarifa, pagamento e despacho: dicionários versionados no YAML.", 28, line=39)
 
     di = Card(c, 884, 1720, 1130, 570, "10", "Dimensões Bronze → Silver", C["silver"], C["silver_bg"])
-    di.p("contracts/references/dimensoes_tlc.yml", 27, style="mono", line=38)
+    di.p("src/contracts/references/dimensoes_tlc.yml", 27, style="mono", line=38)
     for ref in refs:
         di.p(ref["dataset"], 29, C["silver"], "mono", line=39, gap=8)
     di.rule()
@@ -368,9 +371,8 @@ def architecture(data):
     dq = Card(c, 1214, 2400, 1110, 330, "13", "Auditoria após o update", C["purple"], C["purple_bg"])
     dq.p("Notebook qualidade_contratos → Silver", 29, style="bold", line=40, gap=9)
     dq.p("5 dimensões DAMA; 24 verificações.\nAppend em governanca.dq_resultados; qualquer FAIL lança exceção no notebook.", 27, line=38)
-    lim = Card(c, 2384, 2400, 1152, 330, "14", "Capacidades declaradas", C["gray"], C["gray_bg"], dashed=True)
-    lim.p("obs_metricas: DDL definido, sem coletor.\nOwner, tags e PII declarados nos YAML; aplicação de GRANTs/tags não localizada.", 27, line=38)
-    lim.p("Runtime do workspace não verificado.", 26, C["muted"], line=36)
+    lim = Card(c, 2384, 2400, 1152, 330, "14", "Observabilidade e metadados", C["gray"], C["gray_bg"])
+    lim.p("obs_metricas: contagens, freshness e expectations após a auditoria.\nOwner, tags e PII declarados nos YAML; sem aplicação automática de GRANTs/tags.", 27, line=38)
 
     c.path([(64, 2770), (3536, 2770)], C["line"], 2)
     c.text(64, 2798, "LEGENDA", 23, C["muted"], "bold")
@@ -378,7 +380,7 @@ def architecture(data):
         c.path([(x, 2820), (x+64, 2820)], color, 4, dashed=dashed, arrow=True)
         c.text(x+82, 2798, label, 26, color)
     c.text(64, 2856, "Nota: soma_distancia_km é o alias do contrato; o código soma trip_distance sem converter a unidade.", 26, C["muted"])
-    c.text(64, 2898, "Auditoria definida no repo; célula inicial e import do notebook de qualidade requerem ajuste para execução portátil.", 26, C["muted"])
+    c.text(64, 2898, "Código e contratos em src/; consultas em analysis/. Os recursos DAB resolvem os caminhos relativos aos seus YAMLs.", 26, C["muted"])
     c.text(64, 2940, "Fonte: código, notebooks, YAMLs e workflow versionados · sem comprovação de execução no GitHub ou no Databricks.", 25, C["muted"])
     save(c, "arquitetura-projeto", "Arquitetura do lakehouse NYC Taxi — case-ifood",
          "Arquitetura versionada: CI, deploy manual DAB, Job update e qualidade, medallion, cinco dimensões Silver e seis LEFT JOINs na Gold. Execução remota não verificada.")
@@ -443,7 +445,7 @@ def quality(data):
     rt.p("MV privada: expect_all registra métricas no event log. O código classifica e roteia as linhas pelas regras DROP.", 28, line=39)
     rt.p("Conformes → Silver; inválidas + duplicatas excedentes → quarentena. passenger_count nulo gera WARN e permanece na Silver.", 28, line=39)
 
-    report = Card(c, 64, 2010, 1706, 340, "06", "Relatério e interrupção por falha", C["purple"], C["purple_bg"])
+    report = Card(c, 64, 2010, 1706, 340, "06", "Relatório e interrupção por falha", C["purple"], C["purple_bg"])
     report.p("Job: pipeline_update → qualidade_contratos", 30, C["purple"], "bold", line=41)
     report.p("Append em case_ifood.governanca.dq_resultados: PASS/FAIL, métrica, horário e até 5 exemplos JSON por regra com falha.", 28, line=39)
     report.p("Após gravar, qualquer FAIL lança exceção no notebook.", 28, line=39)
@@ -454,7 +456,7 @@ def quality(data):
 
     c.path([(64, 2400), (3536, 2400)], C["line"], 2)
     c.text(64, 2430, "ESCOPO: configuração e implementação versionadas; resultados de execuções remotas não foram consultados.", 27, C["muted"], "bold")
-    c.text(64, 2480, "Pré-requisito de runtime: ajustar a célula inicial (Markdown marcado como código) e o import fixo do notebook de qualidade.", 26, C["muted"])
+    c.text(64, 2480, "Código e contratos em src/; notebooks localizam os módulos na mesma cópia publicada pelo bundle.", 26, C["muted"])
     c.text(64, 2526, "CI sem lint, análise de segurança ou cobertura configurados · não há deploy automático no workflow atual.", 26, C["muted"])
     save(c, "testes-e-qualidade", "Testes automatizados e qualidade dos dados — case-ifood",
          "GitHub Actions: 16 testes Python, validação DAB condicional. Databricks: expectations, quarentena e 24 verificações de auditoria Silver em cinco dimensões DAMA. Execução remota não verificada.")
