@@ -57,6 +57,15 @@ A [autenticação de bundles](https://docs.databricks.com/aws/en/dev-tools/bundl
 
 ### 2.2. Validar e publicar o DAB
 
+**No primeiro deploy em um catálogo novo**, execute no SQL Editor ou em uma célula `%sql` antes dos comandos do bundle:
+
+```sql
+CREATE CATALOG IF NOT EXISTS case_nyc_taxi;
+CREATE SCHEMA IF NOT EXISTS case_nyc_taxi.bronze;
+```
+
+A API de criação da pipeline exige que seu catálogo já exista. Esta preparação mínima resolve a dependência inicial; depois do deploy, o bootstrap completa os schemas, volumes, tabelas de governança e arquivos. A criação idempotente do catálogo segue a sintaxe de [CREATE CATALOG](https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-syntax-ddl-create-catalog).
+
 Na raiz do repositório:
 
 ```powershell
@@ -64,6 +73,8 @@ databricks bundle validate -t dev
 databricks bundle deploy -t dev
 databricks bundle summary -t dev
 ```
+
+Se um deploy já falhou com `CATALOG_DOES_NOT_EXIST` e criou apenas o job de bootstrap, execute o SQL acima e repita o deploy. Em seguida, execute o bootstrap da seção 2.3 antes de validar/atualizar o grafo da pipeline. O campo `mode` dos targets define desenvolvimento/produção; a propriedade depreciada `pipelines.*.development` não é declarada nos resources.
 
 Os caminhos da biblioteca da pipeline e dos notebooks estão relativos aos YAML que os declaram. Os notebooks descobrem o diretório `src/` pelo caminho em que estão executando e localizam seus módulos e contratos dentro dele. A pipeline recebe `${workspace.file_path}/src/contracts` pela configuração do DAB. As tasks de notebook têm ambientes serverless e dependências declarados nos jobs; a pipeline usa serverless e declara `PyYAML` no ambiente do resource.
 

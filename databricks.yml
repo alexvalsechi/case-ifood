@@ -3,8 +3,8 @@
 # Fonte única do projeto: este repo (branch main). Regras do projeto: ver SDD.md.
 #
 # Deploy:
-#   databricks bundle deploy -t dev    # desenvolvimento (development: true)
-#   databricks bundle deploy -t prod   # produção (development: false)
+#   databricks bundle deploy -t dev    # target com mode: development
+#   databricks bundle deploy -t prod   # target com mode: production
 # =============================================================================
 bundle:
   name: case-nyc-taxi
@@ -16,13 +16,5 @@ targets:
   dev:
     mode: development
     default: true
-    resources:
-      pipelines:
-        case_nyc_taxi_medallion:
-          development: true
   prod:
     mode: production
-    resources:
-      pipelines:
-        case_nyc_taxi_medallion:
-          development: false

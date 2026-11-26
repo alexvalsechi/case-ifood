@@ -1,5 +1,5 @@
 # Job de provisionamento do ambiente (bootstrap) — passo único do fluxo de
-# recriação: deploy do bundle → ESTE JOB (uma vez, sob demanda) → job
+# recriação: catálogo/schema bronze existentes → deploy → ESTE JOB → job
 # case_nyc_taxi_update_e_qualidade (recorrente). Sem schedule de propósito:
 # é provisionamento, não execução diária. O notebook é idempotente
 # (CREATE ... IF NOT EXISTS + pula arquivos já presentes) — pode rodar
