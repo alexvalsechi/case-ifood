@@ -3,9 +3,9 @@
 # a fonte de verdade é o contrato. Ver SDD.md.
 resources:
   pipelines:
-    case_ifood_medallion:
-      name: case_ifood_medallion
-      catalog: case_ifood
+    case_nyc_taxi_medallion:
+      name: case_nyc_taxi_medallion
+      catalog: case_nyc_taxi
       schema: bronze
       serverless: true
       photon: true
@@ -15,9 +15,9 @@ resources:
       configuration:
         # Path dos contratos, portável por target: no deploy via DAB resolve
         # para o file_path do bundle; o motor lê via spark.conf.
-        case_ifood.contracts_dir: ${workspace.file_path}/src/contracts
+        case_nyc_taxi.contracts_dir: ${workspace.file_path}/src/contracts
       tags:
-        case: ifood
+        case: nyc_taxi
         dominio: mobilidade_urbana
         padrao: medallion
       environment:
@@ -25,4 +25,4 @@ resources:
           - PyYAML>=6.0
       libraries:
         - file:
-            path: ../src/02_pipelines/pipeline_case_ifood.py
+            path: ../src/02_pipelines/pipeline_case_nyc_taxi.py

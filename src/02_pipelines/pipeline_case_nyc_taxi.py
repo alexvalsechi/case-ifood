@@ -14,14 +14,14 @@ from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 
 # Contratos localizados de forma PORTÁVEL (sem path absoluto hardcoded):
-# 1) configuração do pipeline 'case_ifood.contracts_dir' — setável via
+# 1) configuração do pipeline 'case_nyc_taxi.contracts_dir' — setável via
 #    settings ou DAB por target (ex.: ${workspace.file_path}/src/contracts);
 # 2) fallback: o root_path do pipeline entra no sys.path; o pai dele é a
 #    raiz do projeto, que contém contracts/.
 # (O runtime do SDP executa o código de uma cópia efêmera, sem __file__.)
 def _localizar_contracts():
     try:
-        return spark.conf.get("case_ifood.contracts_dir")
+        return spark.conf.get("case_nyc_taxi.contracts_dir")
     except Exception:
         pass
     for entrada in sys.path:
@@ -32,12 +32,14 @@ def _localizar_contracts():
             if os.path.isdir(candidato):
                 return candidato
     raise RuntimeError(
-        "contracts/ não localizado: configure 'case_ifood.contracts_dir' no "
+        "contracts/ não localizado: configure 'case_nyc_taxi.contracts_dir' no "
         "pipeline (settings/DAB) ou rode com root_path=<raiz>/src/02_pipelines."
     )
 
 
 CONTRACTS_DIR = _localizar_contracts()
+sys.path.insert(0, os.path.join(os.path.dirname(CONTRACTS_DIR), "00_config"))
+from landing import listar_arquivos_landing
 
 
 def _carregar_contratos():
@@ -141,15 +143,14 @@ def _ordenar_deterministicamente_por_trip_id(df):
 # da landing (glob do contrato) e lido com o PROPRIO schema e normalizado para o
 # schema_bronze canônico do contrato via cast. Isso contorna as variações de tipo
 # físico (int/bigint/double) e de capitalização entre os arquivos mensais da TLC.
-import glob as _glob
-
 for _contrato in CONTRATOS:
     _dataset = _contrato["dataset"]
     _volume = _contrato["fonte"]["volume"]
-    _arquivos = sorted(
-        os.path.basename(p)
-        for p in _glob.glob(f"{_volume}/{_contrato['fonte']['glob']}")
-    )
+    _arquivos = listar_arquivos_landing(_contrato)
+    if not _arquivos:
+        raise FileNotFoundError(
+            f"Landing sem partições confirmadas para {_dataset}; execute o bootstrap/ingestão antes do update"
+        )
     _nome_bronze = _contrato["destinos"]["bronze"]
     _schema_bronze = _contrato["schema_bronze"]
     _comentario = _contrato["descricao"].strip()
@@ -179,7 +180,7 @@ for _contrato in CONTRATOS:
                     colunas.append(F.lit(None).cast(tipo).alias(coluna))
             return (
                 df.select(*colunas)
-                .withColumn("_arquivo_origem", F.lit(os.path.basename(caminho_arquivo)))
+                .withColumn("_arquivo_origem", F.lit(caminho_arquivo))
                 .withColumn("_ingestao_ts", F.current_timestamp())
             )
 
@@ -187,8 +188,8 @@ for _contrato in CONTRATOS:
 
     for _arquivo in _arquivos:
         _criar_fluxo_arquivo(
-            caminho_arquivo=f"{_volume}/{_arquivo}",
-            nome_fluxo=f"{_dataset}_{_arquivo.replace('.', '_').replace('-', '_')}",
+            caminho_arquivo=_arquivo,
+            nome_fluxo=f"{_dataset}_{os.path.basename(_arquivo).replace('.', '_').replace('-', '_')}",
             schema_bronze=_schema_bronze,
             destino=_nome_bronze,
         )

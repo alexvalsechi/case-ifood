@@ -31,8 +31,8 @@ def test_resources_sao_yaml_validos_com_caminhos_existentes():
             doc = yaml.safe_load(fh)
         for pipeline in doc.get("resources", {}).get("pipelines", {}).values():
             conf = pipeline.get("configuration", {})
-            assert "case_ifood.contracts_dir" in conf, (
-                "pipeline sem a configuração case_ifood.contracts_dir (portabilidade)"
+            assert "case_nyc_taxi.contracts_dir" in conf, (
+                "pipeline sem a configuração case_nyc_taxi.contracts_dir (portabilidade)"
             )
             for lib in pipeline.get("libraries", []):
                 alvo = os.path.normpath(os.path.join(os.path.dirname(caminho), lib["file"]["path"]))

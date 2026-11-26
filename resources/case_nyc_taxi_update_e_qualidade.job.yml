@@ -1,18 +1,18 @@
 # Job operacional do case (fluxo do SDD, seção 6):
 #   1) update do pipeline SDP (normal — nunca full refresh por padrão)
 #   2) motor de qualidade DAMA sobre as silvers
-#      → grava os relatórios em case_ifood.governanca.dq_resultados
+#      → grava os relatórios em case_nyc_taxi.governanca.dq_resultados
 #      (FAIL crítico interrompe o job — é o gate de qualidade do projeto)
-#   3) motor de observabilidade → grava em case_ifood.governanca.obs_metricas
+#   3) motor de observabilidade → grava em case_nyc_taxi.governanca.obs_metricas
 #      (métricas sinalizam atenção; falhas técnicas da task propagam ao job)
 resources:
   jobs:
-    case_ifood_update_e_qualidade:
-      name: case_ifood_update_e_qualidade
+    case_nyc_taxi_update_e_qualidade:
+      name: case_nyc_taxi_update_e_qualidade
       tasks:
         - task_key: pipeline_update
           pipeline_task:
-            pipeline_id: ${resources.pipelines.case_ifood_medallion.id}
+            pipeline_id: ${resources.pipelines.case_nyc_taxi_medallion.id}
         - task_key: qualidade_contratos
           depends_on:
             - task_key: pipeline_update
@@ -20,7 +20,7 @@ resources:
           notebook_task:
             notebook_path: ../src/03_qualidade/qualidade_contratos.ipynb
             base_parameters:
-              catalogo: case_ifood
+              catalogo: case_nyc_taxi
               datasets: ""
         - task_key: observabilidade_contratos
           depends_on:
@@ -29,8 +29,8 @@ resources:
           notebook_task:
             notebook_path: ../src/04_observabilidade/observabilidade_contratos.ipynb
             base_parameters:
-              catalogo: case_ifood
-              pipeline_id: ${resources.pipelines.case_ifood_medallion.id}
+              catalogo: case_nyc_taxi
+              pipeline_id: ${resources.pipelines.case_nyc_taxi_medallion.id}
 
       environments:
         - environment_key: default

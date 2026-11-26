@@ -1,20 +1,21 @@
 # Job de provisionamento do ambiente (bootstrap) — passo único do fluxo de
 # recriação: deploy do bundle → ESTE JOB (uma vez, sob demanda) → job
-# case_ifood_update_e_qualidade (recorrente). Sem schedule de propósito:
+# case_nyc_taxi_update_e_qualidade (recorrente). Sem schedule de propósito:
 # é provisionamento, não execução diária. O notebook é idempotente
 # (CREATE ... IF NOT EXISTS + pula arquivos já presentes) — pode rodar
 # quantas vezes quiser.
 resources:
   jobs:
-    case_ifood_bootstrap:
-      name: case_ifood_bootstrap
+    case_nyc_taxi_bootstrap:
+      name: case_nyc_taxi_bootstrap
+      max_concurrent_runs: 1
       tasks:
         - task_key: bootstrap_ambiente
           environment_key: default
           notebook_task:
             notebook_path: ../src/01_ingestao/bootstrap_ambiente.ipynb
             base_parameters:
-              catalogo: case_ifood
+              catalogo: case_nyc_taxi
               ano: "2023"
               meses: "01,02,03,04,05"
 
@@ -25,4 +26,5 @@ resources:
             dependencies:
               - PyYAML>=6.0
               - requests>=2.31
+              - pyarrow>=19.0
               - pandas>=2.0

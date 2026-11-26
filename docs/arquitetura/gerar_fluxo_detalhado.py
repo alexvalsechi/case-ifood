@@ -31,15 +31,17 @@ def read_model():
     """Obtém nomes reais e registra a origem de cada componente desenhado."""
     sources = [
         "databricks.yml", ".github/workflows/tests.yml",
-        "resources/case_ifood_bootstrap.job.yml",
-        "resources/case_ifood_update_e_qualidade.job.yml",
-        "resources/case_ifood_medallion.pipeline.yml",
+        "resources/case_nyc_taxi_bootstrap.job.yml",
+        "resources/case_nyc_taxi_update_e_qualidade.job.yml",
+        "resources/case_nyc_taxi_medallion.pipeline.yml",
         "src/contracts/yellow_trips.yml", "src/contracts/green_trips.yml",
         "src/contracts/references/dimensoes_tlc.yml", "src/contracts/gold/trips.yml",
         "src/00_config/motores.py", "src/01_ingestao/bootstrap_ambiente.ipynb",
+        "src/00_config/download.py", "src/00_config/landing.py",
+        "analysis/observabilidade_ingestao.sql", "tests/test_ingestao.py",
         "src/01_ingestao/ingestao_parametrizada.ipynb",
         "src/01_ingestao/atualizar_taxi_zone_lookup.py",
-        "src/02_pipelines/pipeline_case_ifood.py",
+        "src/02_pipelines/pipeline_case_nyc_taxi.py",
         "src/03_qualidade/qualidade_contratos.ipynb",
         "src/04_observabilidade/observabilidade_contratos.ipynb",
         "analysis/consultas_gold.ipynb",
@@ -53,8 +55,8 @@ def read_model():
     datasets = [load(f"src/contracts/{taxi}_trips.yml") for taxi in ("yellow", "green")]
     references = load("src/contracts/references/dimensoes_tlc.yml")["dimensoes"]
     gold = load("src/contracts/gold/trips.yml")
-    bootstrap = load("resources/case_ifood_bootstrap.job.yml")["resources"]["jobs"]["case_ifood_bootstrap"]
-    operational = load("resources/case_ifood_update_e_qualidade.job.yml")["resources"]["jobs"]["case_ifood_update_e_qualidade"]
+    bootstrap = load("resources/case_nyc_taxi_bootstrap.job.yml")["resources"]["jobs"]["case_nyc_taxi_bootstrap"]
+    operational = load("resources/case_nyc_taxi_update_e_qualidade.job.yml")["resources"]["jobs"]["case_nyc_taxi_update_e_qualidade"]
     parameters = bootstrap["tasks"][0]["notebook_task"]["base_parameters"]
     # Mudanças na topologia exigem revisão do desenho, em vez de uma figura desatualizada.
     assert [t["task_key"] for t in operational["tasks"]] == [
@@ -265,13 +267,13 @@ def generate(canvas_type):
     f = Flow(c)
     short = lambda name: name.removeprefix(model["catalog"] + ".")
     datasets = model["datasets"]
-    c.text(72,40,"CASE IFOOD  /  ARQUITETURA IMPLEMENTADA",24,P["data"],True)
+    c.text(72,40,"LAKEHOUSE NYC TAXI  /  ARQUITETURA IMPLEMENTADA",24,P["data"],True)
     c.text(72,84,"Da origem TLC à Gold: componentes e conexões",58,P["ink"],True)
     c.text(74,165,"Leia da esquerda para a direita. Corridas e referências seguem caminhos próprios até o enriquecimento.",29,P["muted"])
 
     # Entrega e declaração: fora do fluxo de dados para não sugerir deploy automático.
     f.card("github",72,235,750,220,"GitHub · código e CI","git")
-    f.text(98,337,"src/ + analysis/ + resources/\n16 testes Python · validação DAB condicional",690,28)
+    f.text(98,337,"src/ + analysis/ + resources/\nTestes Python · validação DAB condicional",690,28)
     f.card("dab",920,235,740,220,"Databricks Asset Bundle","stack")
     f.text(946,337,"CLI: validate → deploy · targets dev/prod\ndatabricks.yml + resources/*.yml",685,28)
     f.edge("github","dab",[(822,345),(920,345)],"config", "manual", (835,307))
@@ -293,9 +295,9 @@ def generate(canvas_type):
     c.text(650,539,"DATABRICKS  ·  Lakehouse NYC Taxi",36,P["white"],True)
     c.text(2380,546,"Workspace + Unity Catalog",28,P["white"])
     c.text(600,622,"PREPARAÇÃO SOB DEMANDA",23,P["data"],True)
-    c.text(1320,622,"JOB OPERACIONAL  ·  case_ifood_update_e_qualidade",23,P["purple"],True)
+    c.text(1320,622,"JOB OPERACIONAL  ·  case_nyc_taxi_update_e_qualidade",23,P["purple"],True)
     f.card("bootstrap",600,670,620,255,"Bootstrap do ambiente","play")
-    f.text(625,773,"case_ifood_bootstrap\nCria UC e chama os motores de ingestão\nCREATE ... IF NOT EXISTS",568,27,leading=37)
+    f.text(625,773,"case_nyc_taxi_bootstrap\nCria UC e chama os motores de ingestão\nCREATE ... IF NOT EXISTS",568,27,leading=37)
     f.card("update",1320,670,390,255,"Pipeline update","play",P["purple"],P["purple_bg"])
     f.text(1345,773,"pipeline_update\nAtualização normal\nBronze → Silver → Gold",338,27,leading=37)
     f.card("audit",1800,670,515,255,"Auditoria DAMA","shield",P["purple"],P["purple_bg"])
@@ -308,7 +310,7 @@ def generate(canvas_type):
     f.edge("update","audit",[(1710,795),(1800,795)],"task")
     f.edge("audit","observe",[(2315,795),(2400,795)],"task")
 
-    f.pill(600,973,"Lakeflow Spark Declarative Pipelines · case_ifood_medallion · serverless + Photon",1680,size=28)
+    f.pill(600,973,"Lakeflow Spark Declarative Pipelines · case_nyc_taxi_medallion · serverless + Photon",1680,size=28)
     f.pill(2360,973,"event_log() · métricas nativas",620,P["purple"],P["purple_bg"],"pulse",26)
     f.nodes.append({"id":"eventlog","title":"event_log()"})
     f.edge("update","pipeline",[(1515,925),(1515,973)],"config")
@@ -332,9 +334,9 @@ def generate(canvas_type):
 
     # Ingestão: download e volume são elementos distintos, ligados por dados.
     f.card("download",600,1110,460,250,"Download Parquet","cloud")
-    f.text(625,1214,"motores.baixar_da_fonte()\nHTTP · até 3 tentativas\nTemporário → landing\nSkip: arquivo presente/não vazio",408,25,leading=32)
+    f.text(625,1214,"HTTP · retry por tipo de falha\nBackoff + Retry-After\nTemporário → Parquet validado\nSkip: footer + hash conferidos",408,25,leading=32)
     f.card("files",600,1430,460,240,"Volume landing.files","folder")
-    f.text(625,1537,f"/Volumes/{model['catalog']}/\nlanding/files\nArquivos Parquet mensais",408,26,leading=35)
+    f.text(625,1537,"categoria=green | yellow\nmes_ano=MM-AAAA\nParquet + manifesto",408,26,leading=35)
     f.pill(600,1688,"governanca.log_ingestao",460,icon="database",size=23)
     f.nodes.append({"id":"ingestion_log","title":"governanca.log_ingestao"})
     f.edge("parquets","download",[(482,1280),(600,1280)])
@@ -342,7 +344,7 @@ def generate(canvas_type):
     f.edge("manual","files",[(482,1700),(560,1700),(560,1595),(600,1595)],"config","raw",(492,1663))
     f.edge("download","files",[(830,1360),(830,1430)])
     f.edge("download","ingestion_log",[(1060,1300),(1090,1300),(1090,1715),(1060,1715)],"metric")
-    c.text(600,1752,"Status + tamanho + MD5 parcial (64 MiB)",23,P["muted"])
+    c.text(600,1752,"SHA-256 completo · log por tentativa",23,P["muted"])
 
     f.card("lookup",600,1820,460,178,"Atualizar lookup TLC","cloud")
     f.text(625,1922,"Cabeçalho CSV validado\nSHA-256 + snapshot datado",408,25,leading=32)
@@ -413,7 +415,7 @@ def generate(canvas_type):
     # Fundação comum: os nomes das tabelas no desenho omitem só o catálogo.
     c.rect(600,2310,2380,75,P["ink"],radius=12)
     f.icon("shield",619,2320,48,P["white"])
-    c.text(688,2327,"Unity Catalog · case_ifood",30,P["white"],True)
+    c.text(688,2327,"Unity Catalog · case_nyc_taxi",30,P["white"],True)
     c.text(1190,2330,"landing  |  bronze  |  silver  |  gold  |  governanca     ·     Delta Lake + Parquet",27,P["white"])
     c.text(72,2343,"4 dicionários em YAML → Bronze",24,P["data"],True)
 
@@ -429,7 +431,7 @@ def generate(canvas_type):
         color,dashed = styles[kind]
         f.line([(x,2542),(x+68,2542)],color,4,dashed,True)
         c.text(x+90,2523,label,26,P["ink"])
-    c.text(72,2594,"A auditoria ocorre após materializar a Gold. O modo raw usa a landing existente por padrão. Todos os nomes de tabela pertencem ao catálogo case_ifood.",26,P["muted"])
+    c.text(72,2594,"A auditoria ocorre após materializar a Gold. O modo raw usa a landing existente por padrão. Todos os nomes de tabela pertencem ao catálogo case_nyc_taxi.",26,P["muted"])
 
     ids = {n["id"] for n in f.nodes} | {"platform", "pipeline", "ingest"}
     assert all(edge["from"] in ids and edge["to"] in ids for edge in f.edges)
@@ -441,7 +443,7 @@ def generate(canvas_type):
     }
     c.save(
         "arquitetura-detalhada",
-        "Arquitetura detalhada do case iFood: fluxo, ícones e conexões",
+        "Arquitetura detalhada do case NYC Taxi: fluxo, ícones e conexões",
         "Fluxo implementado de GitHub e DAB ao bootstrap Databricks; Parquets Yellow/Green, CSV Taxi Zones e dicionários YAML; download, volumes, Bronze, validação privada, Silver e quarentena; cinco dimensões, seis LEFT JOINs, Gold e consultas SQL. Inclui jobs, logs, auditoria DAMA e observabilidade.",
         metadata,
     )

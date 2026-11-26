@@ -6,10 +6,10 @@ dimensoes:
     chave: LocationID
     fonte:
       tipo: volume_csv
-      path: /Volumes/case_ifood/landing/reference/taxi_zone_lookup.csv
+      path: /Volumes/case_nyc_taxi/landing/reference/taxi_zone_lookup.csv
       url: https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv
       versao: versionada_por_data_de_snapshot
-    destinos: {bronze: case_ifood.bronze.dim_taxi_zone, silver: case_ifood.silver.dim_taxi_zone}
+    destinos: {bronze: case_nyc_taxi.bronze.dim_taxi_zone, silver: case_nyc_taxi.silver.dim_taxi_zone}
     colunas:
       - {origem: LocationID, nome: LocationID, tipo: int}
       - {origem: Borough, nome: Borough, tipo: string}
@@ -27,7 +27,7 @@ dimensoes:
         - {vendor_id: 1, vendor_name: Creative Mobile Technologies}
         - {vendor_id: 2, vendor_name: VeriFone Inc.}
         - {vendor_id: 6, vendor_name: Myle Technologies}
-    destinos: {bronze: case_ifood.bronze.dim_vendor, silver: case_ifood.silver.dim_vendor}
+    destinos: {bronze: case_nyc_taxi.bronze.dim_vendor, silver: case_nyc_taxi.silver.dim_vendor}
     colunas:
       - {origem: vendor_id, nome: vendor_id, tipo: int}
       - {origem: vendor_name, nome: vendor_name, tipo: string}
@@ -47,7 +47,7 @@ dimensoes:
         - {rate_code_id: 5, rate_code_name: Tarifa negociada}
         - {rate_code_id: 6, rate_code_name: Viagem em grupo}
         - {rate_code_id: 99, rate_code_name: Desconhecido}
-    destinos: {bronze: case_ifood.bronze.dim_rate_code, silver: case_ifood.silver.dim_rate_code}
+    destinos: {bronze: case_nyc_taxi.bronze.dim_rate_code, silver: case_nyc_taxi.silver.dim_rate_code}
     colunas:
       - {origem: rate_code_id, nome: rate_code_id, tipo: int}
       - {origem: rate_code_name, nome: rate_code_name, tipo: string}
@@ -66,7 +66,7 @@ dimensoes:
         - {payment_type: 4, payment_type_name: Contestação}
         - {payment_type: 5, payment_type_name: Desconhecido}
         - {payment_type: 6, payment_type_name: Corrida anulada}
-    destinos: {bronze: case_ifood.bronze.dim_payment_type, silver: case_ifood.silver.dim_payment_type}
+    destinos: {bronze: case_nyc_taxi.bronze.dim_payment_type, silver: case_nyc_taxi.silver.dim_payment_type}
     colunas:
       - {origem: payment_type, nome: payment_type, tipo: int}
       - {origem: payment_type_name, nome: payment_type_name, tipo: string}
@@ -81,7 +81,7 @@ dimensoes:
       linhas:
         - {trip_type: 1, trip_type_name: Abordagem na rua}
         - {trip_type: 2, trip_type_name: Despacho}
-    destinos: {bronze: case_ifood.bronze.dim_trip_type, silver: case_ifood.silver.dim_trip_type}
+    destinos: {bronze: case_nyc_taxi.bronze.dim_trip_type, silver: case_nyc_taxi.silver.dim_trip_type}
     colunas:
       - {origem: trip_type, nome: trip_type, tipo: int}
       - {origem: trip_type_name, nome: trip_type_name, tipo: string}

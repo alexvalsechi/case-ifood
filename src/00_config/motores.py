@@ -1,16 +1,16 @@
 # =============================================================================
-# Motores genéricos do case_ifood — sem lógica específica de dataset.
+# Motores genéricos do case_nyc_taxi — sem lógica específica de dataset.
 # Qualquer dataset novo é onboardado apenas com um contrato YAML em contracts/.
 # Convenção DAMA-DMBOK: metadados e lineage registrados em governanca.log_ingestao.
 # =============================================================================
 import fnmatch
-import hashlib
 import os
 import shutil
-import time
-from datetime import datetime, timezone
 
 import yaml
+
+from download import COLUNAS_LOG, FalhaIngestao, ingerir_particoes
+from landing import normalizar_periodos
 
 # Caminho base do projeto: relativo a este arquivo (00_config/) — portável
 # entre workspaces e para cópias deployadas via DAB (sem path absoluto).
@@ -56,6 +56,12 @@ def criar_tabelas_governanca(catalogo, spark):
         ) USING DELTA
         COMMENT 'Log de execuções do motor de ingestão (DAMA: Metadata Management / lineage)'
     """)
+    # Evolução aditiva: mantém o histórico de ingestão anterior e acrescenta
+    # os campos de partição, execução, HTTP, integridade e tentativa.
+    existentes = set(spark.table(_log_path(catalogo)).columns)
+    adicionais = [f"{nome} {tipo}" for nome, tipo in COLUNAS_LOG.items() if nome not in existentes]
+    if adicionais:
+        spark.sql(f"ALTER TABLE {_log_path(catalogo)} ADD COLUMNS ({', '.join(adicionais)})")
     spark.sql(f"""
         CREATE TABLE IF NOT EXISTS {catalogo}.governanca.dq_resultados (
             dataset STRING,
@@ -88,163 +94,50 @@ def criar_tabelas_governanca(catalogo, spark):
     """)
 
 
-def _checksum_arquivo(caminho, max_bytes=64 * 1024 * 1024):
-    """Checksum md5 dos primeiros max_bytes (suficiente para detectar mudanças)."""
-    h = hashlib.md5()
-    with open(caminho, "rb") as f:
-        h.update(f.read(max_bytes))
-    return h.hexdigest()
-
-
 def executar_ingestao(contrato, spark, origem_volume=None, destino_volume=None,
-                      catalogo="case_ifood", filtro_arquivos=None):
-    """MOTOR DE INGESTÃO GENÉRICO orientado a contrato.
+                      catalogo="case_nyc_taxi", filtro_arquivos=None, ano=None,
+                      meses=None, execucao_id=None):
+    """Copia raw para as mesmas partições e com a mesma auditoria do download.
 
-    Move arquivos parquet da origem (volume raw) para a landing zone declarada
-    no contrato, com metadados (tamanho, checksum, timestamp) e log em
-    {catalogo}.governanca.log_ingestao. Idempotente: arquivos já presentes
-    com o mesmo tamanho são pulados. Funciona para QUALQUER dataset parquet
-    em volume — basta um contrato.
-
-    Args:
-        contrato: dict do contrato YAML (carregar_contrato).
-        spark: SparkSession.
-        origem_volume: volume de origem; default = contrato.fonte.volume.
-        destino_volume: volume landing de destino; default = volume do contrato.
-        catalogo: catálogo UC onde ficam as tabelas de governança.
-        filtro_arquivos: lista opcional de nomes; None = todos os que casam com o glob.
+    O modo raw exige ano/meses ou um filtro de nomes gerados pelo url_template.
+    Aceita a landing plana anterior e a origem já particionada. Nunca apaga a
+    origem. Cada arquivo deve ser um Parquet válido antes de ser publicado.
     """
-    fonte = contrato["fonte"]
-    origem = origem_volume or fonte["volume"]
-    destino = destino_volume or fonte["volume"]
-    glob = fonte["glob"]
-    dataset = contrato["dataset"]
-
-    os.makedirs(destino, exist_ok=True)
+    if ano is None or meses is None:
+        if not filtro_arquivos:
+            raise ValueError("Informe ano e meses (ou filtro_arquivos) para planejar as partições raw")
+        import re
+        periodos = []
+        for nome in filtro_arquivos:
+            match = re.search(r"_(\d{4})-(\d{2})\.parquet$", nome)
+            if not match:
+                raise ValueError(f"Nome sem período: {nome}")
+            periodos.append(match.groups())
+        anos = {a for a, _ in periodos}
+        if len(anos) != 1:
+            raise ValueError("Execute um ano por chamada de ingestão")
+        ano, meses = periodos[0][0], [m for _, m in periodos]
+    ano, meses = normalizar_periodos(ano, meses)
     criar_tabelas_governanca(catalogo, spark)
-
-    candidatos = sorted(
-        f for f in os.listdir(origem)
-        if fnmatch.fnmatch(f, glob)
-        and (filtro_arquivos is None or f in filtro_arquivos)
+    return ingerir_particoes(
+        contrato, spark, ano, meses, catalogo, execucao_id=execucao_id,
+        origem_volume=origem_volume or contrato["fonte"]["volume"],
+        destino_volume=destino_volume,
     )
-    if not candidatos:
-        print(f"[aviso] nenhum arquivo em {origem} casa com o glob '{glob}'")
-
-    resultados = []
-    for nome in candidatos:
-        origem_completa = os.path.join(origem, nome)
-        destino_completo = os.path.join(destino, nome)
-        tamanho_mb = os.path.getsize(origem_completa) / (1024 * 1024)
-        checksum = _checksum_arquivo(origem_completa)
-        status, mensagem = "ok", ""
-        inicio = time.time()
-
-        if os.path.exists(destino_completo) and os.path.getsize(destino_completo) > 0:
-            status = "ja_existia"
-        else:
-            try:
-                shutil.copy2(origem_completa, destino_completo)
-            except Exception as exc:
-                status, mensagem = "erro", str(exc)
-
-        duracao = round(time.time() - inicio, 2)
-        resultados.append({
-            "dataset": dataset, "arquivo": nome, "fonte": origem_completa,
-            "tamanho_mb": round(tamanho_mb, 2), "checksum": checksum,
-            "status": status, "ingested_at": datetime.now(timezone.utc),
-            "mensagem": mensagem,
-        })
-        print(f"[{status}] {nome}: {tamanho_mb:.1f} MB ({duracao}s)")
-
-        spark.createDataFrame(
-            [(dataset, nome, origem_completa, round(tamanho_mb, 2), checksum,
-              status, datetime.now(timezone.utc), mensagem)],
-            schema="dataset STRING, arquivo STRING, fonte STRING, tamanho_mb DOUBLE, "
-                   "checksum STRING, status STRING, ingested_at TIMESTAMP, mensagem STRING",
-        ).write.mode("append").saveAsTable(_log_path(catalogo))
-
-    return resultados
 
 
-def baixar_da_fonte(contrato, spark, ano, meses, catalogo="case_ifood", max_tentativas=3):
-    """MOTOR DE DOWNLOAD GENÉRICO orientado a contrato.
+def baixar_da_fonte(contrato, spark, ano, meses, catalogo="case_nyc_taxi",
+                    max_tentativas=None, execucao_id=None):
+    """Baixa e valida as partições declaradas no contrato, auditando cada tentativa.
 
-    Baixa os parquets da fonte oficial (URL declarada no contrato,
-    fonte.url_template) direto para o volume landing do contrato, com retry,
-    arquivo temporário (só move se completar), checksum e log em
-    {catalogo}.governanca.log_ingestao. Idempotente: arquivo já presente
-    com tamanho > 0 é pulado. Funciona para QUALQUER dataset com
-    url_template no contrato — basta informar ano e meses.
+    Erros temporários usam backoff/Retry-After. Falhas permanentes não são
+    retentadas; o lote processa os demais meses e falha com o resumo completo.
+    A landing antiga é copiada para a organização particionada sem remoção.
     """
-    import tempfile
-
-    import requests
-
-    fonte = contrato["fonte"]
-    url_template = fonte["url_template"]
-    destino = fonte["volume"]
-    taxi_type = contrato["taxi_type"]
-    dataset = contrato["dataset"]
-
-    os.makedirs(destino, exist_ok=True)
+    ano, meses = normalizar_periodos(ano, meses)
     criar_tabelas_governanca(catalogo, spark)
-
-    resultados = []
-    for mes in meses:
-        nome = url_template.split("/")[-1].format(taxi_type=taxi_type, ano=ano, mes=mes)
-        url = url_template.format(taxi_type=taxi_type, ano=ano, mes=mes)
-        destino_completo = os.path.join(destino, nome)
-        status, mensagem, checksum = "ok", "", ""
-        inicio = time.time()
-
-        if os.path.exists(destino_completo) and os.path.getsize(destino_completo) > 0:
-            status = "ja_existia"
-            tamanho_mb = os.path.getsize(destino_completo) / (1024 * 1024)
-        else:
-            ultimo_erro = None
-            for tentativa in range(1, max_tentativas + 1):
-                try:
-                    with requests.get(url, stream=True, timeout=300) as resp:
-                        resp.raise_for_status()
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=".parquet") as tmp:
-                            tmp_path = tmp.name
-                            for chunk in resp.iter_content(chunk_size=8 * 1024 * 1024):
-                                tmp.write(chunk)
-                    shutil.move(tmp_path, destino_completo)
-                    tamanho_mb = os.path.getsize(destino_completo) / (1024 * 1024)
-                    ultimo_erro = None
-                    break
-                except Exception as exc:
-                    ultimo_erro = exc
-                    print(f"[erro] tentativa {tentativa}/{max_tentativas} para {nome}: {exc}")
-                    time.sleep(2 * tentativa)
-            if ultimo_erro is not None:
-                status, mensagem = "erro", str(ultimo_erro)
-                tamanho_mb = 0.0
-            else:
-                checksum = _checksum_arquivo(destino_completo)
-
-        duracao = round(time.time() - inicio, 2)
-        resultados.append({
-            "dataset": dataset, "arquivo": nome, "fonte": url,
-            "tamanho_mb": round(tamanho_mb, 2), "checksum": checksum,
-            "status": status, "ingested_at": datetime.now(timezone.utc),
-            "mensagem": mensagem,
-        })
-        print(f"[{status}] {nome}: {tamanho_mb:.1f} MB ({duracao}s)")
-
-        spark.createDataFrame(
-            [(dataset, nome, url, round(tamanho_mb, 2), checksum,
-              status, datetime.now(timezone.utc), mensagem)],
-            schema="dataset STRING, arquivo STRING, fonte STRING, tamanho_mb DOUBLE, "
-                   "checksum STRING, status STRING, ingested_at TIMESTAMP, mensagem STRING",
-        ).write.mode("append").saveAsTable(_log_path(catalogo))
-
-        if status == "erro":
-            raise RuntimeError(f"Falha ao baixar {nome} apos {max_tentativas} tentativas") from ultimo_erro
-
-    return resultados
+    return ingerir_particoes(contrato, spark, ano, meses, catalogo,
+                             max_tentativas=max_tentativas, execucao_id=execucao_id)
 
 
 def copiar_glob(origem_glob_dir, glob, destino_dir):

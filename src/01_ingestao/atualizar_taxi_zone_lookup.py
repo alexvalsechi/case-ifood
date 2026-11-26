@@ -9,13 +9,13 @@ from urllib.request import Request, urlopen
 
 
 URL = "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv"
-DESTINO = "/Volumes/case_ifood/landing/reference/taxi_zone_lookup.csv"
-MANIFESTO = "/Volumes/case_ifood/landing/reference/taxi_zone_lookup.manifest"
-ARQUIVO_BASE = "/Volumes/case_ifood/landing/reference/taxi_zone_lookup"
+DESTINO = "/Volumes/case_nyc_taxi/landing/reference/taxi_zone_lookup.csv"
+MANIFESTO = "/Volumes/case_nyc_taxi/landing/reference/taxi_zone_lookup.manifest"
+ARQUIVO_BASE = "/Volumes/case_nyc_taxi/landing/reference/taxi_zone_lookup"
 
 
 def atualizar(dbutils):
-    requisicao = Request(URL, headers={"User-Agent": "case-ifood-reference-ingestion/1.0"})
+    requisicao = Request(URL, headers={"User-Agent": "case-nyc-taxi-reference-ingestion/1.0"})
     with urlopen(requisicao, timeout=60) as resposta:
         conteudo = resposta.read()
     # O CSV oficial pode vir com o cabeçalho entre aspas; normalizar antes de validar
@@ -25,7 +25,7 @@ def atualizar(dbutils):
     if not cabecalho.startswith(b"LocationID,Borough,Zone,service_zone"):
         raise ValueError("O CSV recebido não corresponde ao schema esperado da TLC.")
 
-    dbutils.fs.mkdirs("/Volumes/case_ifood/landing/reference")
+    dbutils.fs.mkdirs("/Volumes/case_nyc_taxi/landing/reference")
     csv = conteudo.decode("utf-8-sig")
     data_snapshot = datetime.now(timezone.utc).date().isoformat()
     diretorio_snapshot = f"{ARQUIVO_BASE}/snapshot_date={data_snapshot}"

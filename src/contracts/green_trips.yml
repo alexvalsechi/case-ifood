@@ -12,16 +12,26 @@ descricao: >
 
 fonte:
   tipo: volume_parquet
-  volume: /Volumes/case_ifood/landing/files
-  glob: green_tripdata_2023-*.parquet
+  volume: /Volumes/case_nyc_taxi/landing/files
+  glob: "categoria=green/mes_ano=??-????/green_tripdata_????-??.parquet"
+  particao_template: "categoria={taxi_type}/mes_ano={mes}-{ano}"
   formato: parquet
   # template da fonte oficial (TLC) para baixar periodos futuros via motor
   url_template: "https://d37ci6vzurychx.cloudfront.net/trip-data/{taxi_type}_tripdata_{ano}-{mes}.parquet"
 
+  http:
+    max_tentativas: 3
+    timeout_conexao_s: 15
+    timeout_leitura_s: 60
+    timeout_transferencia_s: 900
+    backoff_inicial_s: 2
+    espera_max_s: 120
+    status_retentaveis: [408, 429, 500, 502, 503, 504]
+
 destinos:
-  bronze: case_ifood.bronze.green_trips
-  silver: case_ifood.silver.green_trips
-  quarentena: case_ifood.governanca.quarantine_green_trips
+  bronze: case_nyc_taxi.bronze.green_trips
+  silver: case_nyc_taxi.silver.green_trips
+  quarentena: case_nyc_taxi.governanca.quarantine_green_trips
 
 chave_dedupe_origem: [VendorID, lpep_pickup_datetime, lpep_dropoff_datetime, PULocationID, DOLocationID]
 

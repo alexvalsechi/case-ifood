@@ -1,4 +1,4 @@
-"""Testes estruturais dos contratos YAML do case_ifood — rodam headless no CI.
+"""Testes estruturais dos contratos YAML do case_nyc_taxi — rodam headless no CI.
 
 Validam as regras do SDD: campos obrigatórios, convenções de destinos
 (bronze/silver/quarentena), referências cruzadas (membros do gold, colunas do
@@ -57,10 +57,10 @@ def test_destinos_seguem_convencao_bronze_silver_quarentena():
     for nome, contrato in _contratos_ingestao():
         dataset = contrato["dataset"]
         destinos = contrato["destinos"]
-        assert destinos["bronze"] == f"case_ifood.bronze.{dataset}", nome
-        assert destinos["silver"] == f"case_ifood.silver.{dataset}", nome
+        assert destinos["bronze"] == f"case_nyc_taxi.bronze.{dataset}", nome
+        assert destinos["silver"] == f"case_nyc_taxi.silver.{dataset}", nome
         assert destinos["quarentena"] == (
-            f"case_ifood.governanca.quarantine_{dataset}"
+            f"case_nyc_taxi.governanca.quarantine_{dataset}"
         ), nome
 
 

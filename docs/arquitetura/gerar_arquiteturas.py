@@ -132,7 +132,7 @@ class Canvas:
 
 
 def header(c, title, subtitle):
-    c.text(56, 42, "CASE IFOOD  /  DATABRICKS", 20, COLORS["teal"], True)
+    c.text(56, 42, "LAKEHOUSE NYC TAXI  /  DATABRICKS", 20, COLORS["teal"], True)
     c.text(56, 82, title, 43, bold=True)
     c.text(56, 145, subtitle, 24, COLORS["muted"])
 
@@ -153,7 +153,7 @@ def general():
     c.text(91, 416, "02", 25, COLORS["teal"], True)
     c.text(157, 402, "Bootstrap do ambiente · execução sob demanda", 30, bold=True)
     c.text(157, 450, "Cria catálogo, schemas, volumes e tabelas de governança no Unity Catalog.", 24)
-    c.text(157, 491, "Baixa Parquet Yellow/Green e CSV Taxi Zones da TLC para os volumes de landing.", 24, COLORS["muted"])
+    c.text(157, 491, "Parquet por categoria/mês-ano com manifesto e log HTTP; CSV Taxi Zones separado.", 24, COLORS["muted"])
     c.path([(720, 560), (720, 597)], arrow=True)
 
     c.text(56, 612, "03  PIPELINE SDP · BRONZE → SILVER → GOLD", 22, COLORS["teal"], True)

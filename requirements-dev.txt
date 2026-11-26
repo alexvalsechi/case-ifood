@@ -1,3 +1,5 @@
 # Dependências dos testes unitários (headless, sem Spark)
 pytest>=8.0
 PyYAML>=6.0
+requests>=2.31
+pyarrow>=19.0

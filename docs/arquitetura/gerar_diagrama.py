@@ -23,9 +23,11 @@ OUT = Path(__file__).resolve().parent
 WIDTH, HEIGHT = 3600, 3000
 SOURCES = [
     "src/00_config/motores.py",
+    "src/00_config/download.py",
+    "src/00_config/landing.py",
     "src/01_ingestao/bootstrap_ambiente.ipynb",
     "src/01_ingestao/ingestao_parametrizada.ipynb",
-    "src/02_pipelines/pipeline_case_ifood.py",
+    "src/02_pipelines/pipeline_case_nyc_taxi.py",
     "src/03_qualidade/qualidade_contratos.ipynb",
     "src/04_observabilidade/observabilidade_contratos.ipynb",
     "src/contracts/green_trips.yml",
@@ -35,13 +37,15 @@ SOURCES = [
     "src/01_ingestao/atualizar_taxi_zone_lookup.py",
     "analysis/consultas_gold.ipynb",
     "databricks.yml",
-    "resources/case_ifood_medallion.pipeline.yml",
-    "resources/case_ifood_bootstrap.job.yml",
-    "resources/case_ifood_update_e_qualidade.job.yml",
+    "resources/case_nyc_taxi_medallion.pipeline.yml",
+    "resources/case_nyc_taxi_bootstrap.job.yml",
+    "resources/case_nyc_taxi_update_e_qualidade.job.yml",
     ".github/workflows/tests.yml",
     "tests/test_contratos.py",
     "tests/test_dab.py",
     "tests/test_lookup_guard.py",
+    "tests/test_ingestao.py",
+    "analysis/observabilidade_ingestao.sql",
     "tests/conftest.py",
     "requirements-dev.txt",
     "SDD.md",
@@ -200,18 +204,26 @@ def model():
     gold = load_yaml("src/contracts/gold/trips.yml")
     refs = load_yaml("src/contracts/references/dimensoes_tlc.yml")["dimensoes"]
     counts = {}
-    for name in ("contratos", "lookup_guard", "dab"):
+    for name in ("contratos", "lookup_guard", "dab", "ingestao"):
         tree = ast.parse((ROOT / f"tests/test_{name}.py").read_text(encoding="utf-8"))
-        counts[name] = sum(isinstance(n, ast.FunctionDef) and n.name.startswith("test_")
-                           for n in tree.body)
+        counts[name] = 0
+        for node in tree.body:
+            if not isinstance(node, ast.FunctionDef) or not node.name.startswith("test_"):
+                continue
+            casos = 1
+            for dec in node.decorator_list:
+                if (isinstance(dec, ast.Call) and isinstance(dec.func, ast.Attribute)
+                        and dec.func.attr == "parametrize" and len(dec.args) > 1):
+                    casos *= len(dec.args[1].elts)
+            counts[name] += casos
     # A composição é explícita: falhar é preferível a publicar um desenho desatualizado.
     assert gold["membros"] == [green["dataset"], yellow["dataset"]]
     assert {r["dataset"] for r in refs} == {
         "dim_taxi_zone", "dim_vendor", "dim_rate_code", "dim_payment_type", "dim_trip_type"}
     assert len(gold["enriquecimentos"]) == 6
-    assert gold["nome"] == "case_ifood.gold.trips_consolidado"
-    assert gold["agregados"][0]["nome"] == "case_ifood.gold.trips_diario"
-    assert counts == {"contratos": 11, "lookup_guard": 3, "dab": 2}
+    assert gold["nome"] == "case_nyc_taxi.gold.trips_consolidado"
+    assert gold["agregados"][0]["nome"] == "case_nyc_taxi.gold.trips_diario"
+    assert counts == {"contratos": 11, "lookup_guard": 3, "dab": 2, "ingestao": 45}
     audits = []
     for contract in (yellow, green):
         q = contract["regras_qualidade"]
@@ -262,12 +274,12 @@ def architecture(data):
     _, _, gold, refs, counts, _ = data
     c = Canvas(height=3000)
     heading(c, "Arquitetura do lakehouse NYC Taxi",
-            "case-ifood  /  contratos YAML  /  Unity Catalog: case_ifood  /  implementação versionada",
+            "case-nyc-taxi  /  contratos YAML  /  Unity Catalog: case_nyc_taxi  /  implementação versionada",
             "VISÃO GERAL  ·  DADOS, DIMENSÕES E ENTREGA")
 
     ci = Card(c, 64, 270, 1080, 320, "01", "CI · GitHub Actions", C["teal"], C["teal_bg"])
     ci.p("Push em main ou pull request → pytest", 29, style="bold", line=40, gap=9)
-    ci.p(f"{sum(counts.values())} testes: contratos, lookup e estrutura DAB.", 27, line=37, gap=9)
+    ci.p(f"{sum(counts.values())} testes: contratos, ingestão, lookup e DAB.", 27, line=37, gap=9)
     ci.p("bundle validate -t dev: etapa condicional a DATABRICKS_HOST. Sem deploy no workflow.", 26, C["muted"], line=36)
 
     dab = Card(c, 1204, 270, 1100, 320, "02", "DAB · deploy pela CLI", C["teal"], C["teal_bg"])
@@ -276,7 +288,7 @@ def architecture(data):
     dab.p("Targets dev / prod; contratos via workspace.file_path. Define pipeline e Job no workspace.", 27, line=37)
 
     job = Card(c, 2364, 270, 1172, 320, "03", "Job operacional", C["purple"], C["purple_bg"])
-    job.p("case_ifood_update_e_qualidade", 28, style="mono", line=39, gap=9)
+    job.p("case_nyc_taxi_update_e_qualidade", 28, style="mono", line=39, gap=9)
     job.p("pipeline → qualidade → observabilidade", 29, C["purple"], "bold", line=40, gap=9)
     job.p("Update normal; tasks sequenciais. O job de bootstrap prepara ingestão e lookup antes da operação.", 27, line=37)
     c.path([(2304, 430), (2364, 430)], C["teal"], 4, dashed=True, arrow=True)
@@ -295,9 +307,9 @@ def architecture(data):
     src.p("Parquet mensal → notebook de ingestão parametrizada.", 27, line=38)
     src.p("origem=url: download HTTP\norigem=raw: arquivos existentes", 25, style="mono", line=35)
     src.rule()
-    src.p("/Volumes/case_ifood/\nlanding/files", 27, C["teal"], "mono", line=38)
-    src.p("Glob dos contratos: 2023.\nJanela válida: jan–mai/2023.", 27, line=38)
-    src.p("Preparação da landing pelo job case_ifood_bootstrap.", 25, C["muted"], line=35)
+    src.p("landing.files/categoria=.../\nmes_ano=MM-AAAA/", 25, C["teal"], "mono", line=38)
+    src.p("Parquet + manifesto SHA-256.\nSilver válida: jan–mai/2023.", 27, line=38)
+    src.p("Preparação da landing pelo job case_nyc_taxi_bootstrap.", 25, C["muted"], line=35)
 
     br = Card(c, 734, 930, 610, 650, "05", "Bronze", C["bronze"], C["bronze_bg"])
     br.p("bronze.yellow_trips\nbronze.green_trips", 28, style="mono", line=39)
@@ -318,7 +330,7 @@ def architecture(data):
     si.p("passenger_count nulo: WARN; a linha é mantida.", 26, C["muted"], line=36)
 
     go = Card(c, 2074, 930, 760, 650, "07", "Gold enriquecida", C["gold"], C["gold_bg"])
-    go.p(gold["nome"].removeprefix("case_ifood."), 30, style="mono", line=41, gap=9)
+    go.p(gold["nome"].removeprefix("case_nyc_taxi."), 30, style="mono", line=41, gap=9)
     go.p("Green + Yellow: unionByName, seguido de 6 LEFT JOINs com dimensões Silver.", 28, line=39, gap=10)
     go.p("IDs preservados; sem correspondência, descrições ficam NULL.", 26, C["muted"], line=36, gap=10)
     go.rule()
@@ -344,7 +356,7 @@ def architecture(data):
     rf = Card(c, 64, 1720, 760, 570, "09", "Fontes de referência", C["teal"], C["teal_bg"])
     rf.p("Taxi Zone Lookup · CSV oficial", 29, style="bold", line=40)
     rf.p("atualizar_taxi_zone_lookup.py", 27, style="mono", line=38)
-    rf.p("/Volumes/case_ifood/landing/\nreference/taxi_zone_lookup.csv", 26, style="mono", line=36)
+    rf.p("/Volumes/case_nyc_taxi/landing/\nreference/taxi_zone_lookup.csv", 26, style="mono", line=36)
     rf.p("Snapshot por data + manifesto SHA-256; antes do update.", 26, line=36)
     rf.rule()
     rf.p("Vendor, tarifa, pagamento e despacho: dicionários versionados no YAML.", 28, line=39)
@@ -366,7 +378,7 @@ def architecture(data):
 
     c.text(64, 2344, "OPERAÇÃO, QUALIDADE E GOVERNANÇA", 29, C["purple"], "bold")
     log = Card(c, 64, 2400, 1090, 330, "12", "Rastreabilidade", C["purple"], C["purple_bg"])
-    log.p("governanca.log_ingestao: status por arquivo.\nquarantine_<dataset>: motivos, origem e timestamps.", 27, line=38)
+    log.p("log_ingestao: execução, partição e tentativa HTTP.\nquarantine_<dataset>: motivos, origem e timestamps.", 27, line=38)
     log.p("Expectations: métricas no event log da pipeline. Linhagem por arquivo é preservada na quarentena.", 26, line=36)
     dq = Card(c, 1214, 2400, 1110, 330, "13", "Auditoria após o update", C["purple"], C["purple_bg"])
     dq.p("Notebook qualidade_contratos → Silver", 29, style="bold", line=40, gap=9)
@@ -382,7 +394,7 @@ def architecture(data):
     c.text(64, 2856, "Nota: soma_distancia_km é o alias do contrato; o código soma trip_distance sem converter a unidade.", 26, C["muted"])
     c.text(64, 2898, "Código e contratos em src/; consultas em analysis/. Os recursos DAB resolvem os caminhos relativos aos seus YAMLs.", 26, C["muted"])
     c.text(64, 2940, "Fonte: código, notebooks, YAMLs e workflow versionados · sem comprovação de execução no GitHub ou no Databricks.", 25, C["muted"])
-    save(c, "arquitetura-projeto", "Arquitetura do lakehouse NYC Taxi — case-ifood",
+    save(c, "arquitetura-projeto", "Arquitetura do lakehouse NYC Taxi — case-nyc-taxi",
          "Arquitetura versionada: CI, deploy manual DAB, Job update e qualidade, medallion, cinco dimensões Silver e seis LEFT JOINs na Gold. Execução remota não verificada.")
 
 
@@ -390,7 +402,7 @@ def quality(data):
     green, yellow, _, _, counts, audits = data
     c = Canvas(height=2600)
     heading(c, "Testes automatizados e qualidade dos dados",
-            "case-ifood  /  o que o GitHub verifica  /  o que a pipeline e a auditoria avaliam no Databricks",
+            "case-nyc-taxi  /  o que o GitHub verifica  /  o que a pipeline e a auditoria avaliam no Databricks",
             "MAPA DE VERIFICAÇÕES  ·  CI E DADOS")
     band(c, 64, 270, 1706, f"GITHUB ACTIONS · {sum(counts.values())} TESTES CONFIGURADOS",
          "push em main + pull_request · Ubuntu · Python 3.12\npip install -r requirements-dev.txt → pytest tests -v")
@@ -436,10 +448,10 @@ def quality(data):
         y += height + 8
     c.text(1836, 1460, "Total: 12 por dataset × 2 datasets = 24 verificações em dados.", 28, C["purple"], "bold")
 
-    bv = Card(c, 64, 1580, 1706, 340, "04", "Validação DAB · job independente", C["teal"], C["teal_bg"])
-    bv.p("databricks bundle validate --target dev", 30, C["teal"], "mono", line=41)
-    bv.p("Executada se DATABRICKS_HOST não estiver vazio. HOST e TOKEN vêm dos secrets; o CLI precisa autenticar no workspace.", 28, line=39)
-    bv.p("A validação não faz deploy e não roda o Job.", 28, C["muted"], line=39)
+    bv = Card(c, 64, 1580, 1706, 340, "04", f"Ingestão particionada · {counts['ingestao']} testes", C["teal"], C["teal_bg"])
+    bv.p("tests/test_ingestao.py · Parquets reais + HTTP local", 30, C["teal"], "mono", line=41)
+    bv.p("Partições, manifestos, SHA-256, migração e reexecução. HTTP permanente/temporário, Retry-After, rede, truncamento e armazenamento.", 28, line=39)
+    bv.p("Auditoria por tentativa; cobertura dos meses; identidade dos fluxos SDP. DAB validate permanece condicional aos secrets.", 28, C["muted"], line=39)
 
     rt = Card(c, 1810, 1580, 1726, 340, "05", "Qualidade durante a transformação", C["silver"], C["silver_bg"])
     rt.p("MV privada: expect_all registra métricas no event log. O código classifica e roteia as linhas pelas regras DROP.", 28, line=39)
@@ -447,7 +459,7 @@ def quality(data):
 
     report = Card(c, 64, 2010, 1706, 340, "06", "Relatório e interrupção por falha", C["purple"], C["purple_bg"])
     report.p("Job: pipeline_update → qualidade_contratos", 30, C["purple"], "bold", line=41)
-    report.p("Append em case_ifood.governanca.dq_resultados: PASS/FAIL, métrica, horário e até 5 exemplos JSON por regra com falha.", 28, line=39)
+    report.p("Append em case_nyc_taxi.governanca.dq_resultados: PASS/FAIL, métrica, horário e até 5 exemplos JSON por regra com falha.", 28, line=39)
     report.p("Após gravar, qualquer FAIL lança exceção no notebook.", 28, line=39)
 
     scope = Card(c, 1810, 2010, 1726, 340, "07", "Como interpretar as verificações", C["gray"], C["gray_bg"])
@@ -458,8 +470,8 @@ def quality(data):
     c.text(64, 2430, "ESCOPO: configuração e implementação versionadas; resultados de execuções remotas não foram consultados.", 27, C["muted"], "bold")
     c.text(64, 2480, "Código e contratos em src/; notebooks localizam os módulos na mesma cópia publicada pelo bundle.", 26, C["muted"])
     c.text(64, 2526, "CI sem lint, análise de segurança ou cobertura configurados · não há deploy automático no workflow atual.", 26, C["muted"])
-    save(c, "testes-e-qualidade", "Testes automatizados e qualidade dos dados — case-ifood",
-         "GitHub Actions: 16 testes Python, validação DAB condicional. Databricks: expectations, quarentena e 24 verificações de auditoria Silver em cinco dimensões DAMA. Execução remota não verificada.")
+    save(c, "testes-e-qualidade", "Testes automatizados e qualidade dos dados — case-nyc-taxi",
+         f"GitHub Actions: {sum(counts.values())} testes Python, validação DAB condicional. Databricks: expectations, quarentena e 24 verificações de auditoria Silver em cinco dimensões DAMA. Execução remota não verificada.")
 
 
 def create():

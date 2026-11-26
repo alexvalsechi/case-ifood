@@ -1,24 +1,24 @@
-# SDD — Case iFood: guia de contratos YAML para IA
+# SDD — Lakehouse NYC Taxi: guia de contratos YAML para IA
 
-> **LEITURA OBRIGATÓRIA.** Qualquer tarefa que envolva a pasta `case_ifood/` — criar, editar ou responder perguntas sobre datasets, contratos, pipeline, visões gold ou ingestão — começa lendo este documento até o fim. Ele define como o projeto é operado: **nada se resolve editando código do pipeline; tudo se resolve criando ou editando contratos YAML.**
+> **LEITURA OBRIGATÓRIA.** Qualquer tarefa que envolva a pasta `case_nyc_taxi/` — criar, editar ou responder perguntas sobre datasets, contratos, pipeline, visões gold ou ingestão — começa lendo este documento até o fim. Ele define como o projeto é operado: **nada se resolve editando código do pipeline; tudo se resolve criando ou editando contratos YAML.**
 
 ## 1. Arquitetura em uma página
 
 ```text
 src/contracts/yellow_trips.yml, green_trips.yml  (contratos de INGESTÃO)
-        │  lidos pelo pipeline SDP src/02_pipelines/pipeline_case_ifood.py
+        │  lidos pelo pipeline SDP src/02_pipelines/pipeline_case_nyc_taxi.py
         ▼
-case_ifood.bronze.<dataset>   →  dados brutos + metadados (_arquivo_origem, _ingestao_ts)
+case_nyc_taxi.bronze.<dataset>   →  dados brutos + metadados (_arquivo_origem, _ingestao_ts)
         ▼
-case_ifood.silver.<dataset>  →  limpos, tipados, deduplicados (trip_id), expectations
+case_nyc_taxi.silver.<dataset>  →  limpos, tipados, deduplicados (trip_id), expectations
         ▼  ┌─────────────────────────────────────────────────────────┐
 src/contracts/gold/trips.yml  (contrato de GOLD)  ── lê os silvers ──▶│ unificação (membros)     │
         │                                                        │ + agregados declarativos │
         ▼                                                        └─────────────────────────┘
-case_ifood.gold.<visao>    →  camada de consumo (SQL/BI)
+case_nyc_taxi.gold.<visao>    →  camada de consumo (SQL/BI)
 ```
 
-**Regra de ouro:** o pipeline `src/02_pipelines/pipeline_case_ifood.py` não contém lógica específica de dataset. No startup ele lê YAMLs de `src/contracts/` (ingestão), `src/contracts/references/` (dimensões) e `src/contracts/gold/` (gold) e **gera** as tabelas. Portanto:
+**Regra de ouro:** o pipeline `src/02_pipelines/pipeline_case_nyc_taxi.py` não contém lógica específica de dataset. No startup ele lê YAMLs de `src/contracts/` (ingestão), `src/contracts/references/` (dimensões) e `src/contracts/gold/` (gold) e **gera** as tabelas. Portanto:
 
 * Novo dataset = novo YAML em `src/contracts/`.
 * Nova visão de consumo = item novo em `agregados` (ou novo YAML) em `src/contracts/gold/`.
@@ -41,10 +41,12 @@ Referências vivas: `src/contracts/yellow_trips.yml` e `src/contracts/green_trip
 | `dataset` | Identificador único do dataset (snake_case) | É a chave usada no campo `membros` dos contratos de gold |
 | `taxi_type` | Rótulo gravado na coluna `taxi_type` da silver | Literal (ex.: `yellow`, `green`) |
 | `dominio` / `owner` / `descricao` | Governança e contexto | Declare o grain na descrição (ex.: "uma linha por corrida") |
-| `fonte.volume` | Volume UC de landing | Hoje `/Volumes/case_ifood/landing/files` |
-| `fonte.glob` | Padrão de arquivos a ingerir | Ex.: `yellow_tripdata_2023-*.parquet`; um append flow por arquivo casado |
+| `fonte.volume` | Volume UC de landing | Hoje `/Volumes/case_nyc_taxi/landing/files` |
+| `fonte.glob` | Padrão relativo ao volume, incluindo partições | Ex.: `categoria=yellow/mes_ano=??-????/yellow_tripdata_????-??.parquet`; um append flow por arquivo confirmado, preservando subpastas |
+| `fonte.particao_template` | Organização física da landing | `categoria={taxi_type}/mes_ano={mes}-{ano}`; período do arquivo TLC, não de cada registro |
+| `fonte.http` | Política de download | Tentativas, timeouts, backoff, espera máxima e códigos HTTP temporários; implementada no motor genérico `00_config/download.py` |
 | `fonte.formato` | Formato de leitura | `parquet` (único suportado no motor atual) |
-| `destinos.bronze` / `destinos.silver` / `destinos.quarentena` | Nomes completos das tabelas geradas | `case_ifood.bronze.<dataset>` / `case_ifood.silver.<dataset>` / `case_ifood.governanca.quarantine_<dataset>` |
+| `destinos.bronze` / `destinos.silver` / `destinos.quarentena` | Nomes completos das tabelas geradas | `case_nyc_taxi.bronze.<dataset>` / `case_nyc_taxi.silver.<dataset>` / `case_nyc_taxi.governanca.quarantine_<dataset>` |
 | `chave_dedupe_origem` | Colunas ORIGINAIS (nomes da bronze) que formam a chave de dedupe | Viram o hash `trip_id` (xxhash64) na silver |
 | `mapeamento_silver` | Dicionário `nome_silver -> coluna_bronze` (ou lista, para coalesce) | Colunas fora do mapa são descartadas; nomes contendo `datetime` recebem cast automático para timestamp |
 | `schema_bronze` | Dicionário `coluna -> tipo Spark` | Cada arquivo é lido com o próprio schema físico e normalizado via cast (int/bigint/double e capitalização variam entre arquivos mensais) |
@@ -60,12 +62,12 @@ Referência viva: `src/contracts/gold/trips.yml`. Cada YAML declara **uma unific
 
 | Campo | Significado | Regras |
 | --- | --- | --- |
-| `nome` | Nome completo do consolidado | `case_ifood.gold.<nome>`; deve ser único entre todas as tabelas do projeto |
+| `nome` | Nome completo do consolidado | `case_nyc_taxi.gold.<nome>`; deve ser único entre todas as tabelas do projeto |
 | `descricao` | Contexto da visão | Vira o comentário da tabela (prefixado `[gold] `) |
 | `membros` | Lista de `dataset` de ingestão que compõem o consolidado | **A ordem importa**: o primeiro membro define o layout de colunas; os seguintes apenas acrescentam colunas próprias (`unionByName` com colunas ausentes). Membro inexistente = pipeline falha na carga com erro claro |
 | `enriquecimentos` | `LEFT JOIN`s com dimensões Silver | Cada item define tabela, chaves e colunas/aliases a projetar; mantém fatos sem correspondência |
 | `cluster_by_auto` | `true` habilita liquid clustering automático no consolidado | Alternativa: `cluster_by: [<colunas>]` |
-| `agregados[].nome` | Nome completo da MV agregada | `case_ifood.gold.<nome>`; único no projeto |
+| `agregados[].nome` | Nome completo da MV agregada | `case_nyc_taxi.gold.<nome>`; único no projeto |
 | `agregados[].descricao` | Contexto | Vira comentário da tabela |
 | `agregados[].agrupar_por` | Dimensões: `{coluna, alias?, transformacao?}` (ou string simples) | `transformacao` suportada: `to_date` (gera dimensão de data a partir de timestamp) |
 | `agregados[].medidas` | `{alias, funcao, coluna}` | `funcao` ∈ `count`, `count_distinct`, `sum`, `avg`, `min`, `max` (fora disso = pipeline falha na carga). `coluna: "*"` só com `count` (equivale a `count(*)`) |
@@ -93,13 +95,13 @@ Restrições em todos os caminhos:
 
 * `membros` precisam existir como `dataset` de ingestão (validado na carga).
 * Função fora da whitelist falha a carga do pipeline com mensagem explícita.
-* **Nunca renomear/mover tabela gold existente sem checar a lineage antes** — `case_ifood.gold.trips_consolidado` tem consumidor downstream (notebook) que lê pelo nome.
+* **Nunca renomear/mover tabela gold existente sem checar a lineage antes** — `case_nyc_taxi.gold.trips_consolidado` tem consumidor downstream (notebook) que lê pelo nome.
 
 ## 5. Protocolo de interação com o usuário
 
 Pedidos de visão costumam vir vagos ("quero agrupar corridas por localidade"). Antes de escrever qualquer YAML, perguntar **nesta ordem** (combinar o que já puder inferir; sugerir default, não fazer interrogatório):
 
-1. **Nome da tabela gold** — sugerir a convenção `case_ifood.gold.<sujeito>_<granularidade>` (ex.: `corridas_por_localidade`).
+1. **Nome da tabela gold** — sugerir a convenção `case_nyc_taxi.gold.<sujeito>_<granularidade>` (ex.: `corridas_por_localidade`).
 2. **Dimensões de agrupamento** — listar as colunas silver relevantes ao pedido (ex.: para "localidade": `pickup_location_id`, `dropoff_location_id`; para "tipo": `taxi_type`, `vendor_id`).
 3. **Medidas** — quais métricas (contagem, médias, somas) e com qual função da whitelist; sugerir aliases em PT.
 4. **Dimensão temporal?** — se precisa de quebra por dia (`transformacao: to_date` sobre `pickup_datetime`).
@@ -118,6 +120,10 @@ Depois: montar o YAML, **mostrar ao usuário e confirmar**, e só então executa
 
 ## 7. Gotchas do projeto
 
+* **Ingestão particionada:** `00_config/landing.py` planeja caminhos e valida footer Parquet/SHA-256 completo. Só o manifesto `.manifesto.json` confirmado libera um arquivo para o grafo da Bronze. Arquivos `.part`, a raiz antiga e metadados laterais não entram no glob. O hash completo é verificado na ingestão; a descoberta da pipeline verifica o manifesto e o tamanho, sem ler todos os bytes no planejamento.
+* **Migração de layout:** o motor copia arquivos válidos da raiz antiga para suas partições e preserva a origem. Os append flows mantêm os nomes anteriores, baseados no basename, para conservar identidade no checkpoint. Não alterar o nome do fluxo nem executar full refresh automaticamente. `_arquivo_origem` passa a registrar o caminho completo nas novas ingestões; linhas históricas podem conter somente o nome.
+* **Falhas de download:** todas as partições solicitadas são tentadas; erros permanentes não usam retry. O resumo é persistido antes de lançar `FalhaIngestao`. O bootstrap reúne os resultados das duas categorias. `governanca.log_ingestao` audita os eventos de lote/arquivo/tentativa, independentemente da observabilidade SDP; `analysis/observabilidade_ingestao.sql` consulta cobertura, erros, retries e execuções sem término. Linhas de log anteriores à migração têm `evento`/`execucao_id` nulos.
+* **Arquivos publicados são imutáveis:** reexecução valida o existente e pula o HTTP; não procura revisões remotas via HEAD/ETag. Corrupção de um existente é erro, e sua correção/reprocessamento precisa considerar os checkpoints. O marcador não garante transação entre o Volume e a tabela de log; falhas entre as etapas aparecem como execução sem término e são reconciliadas na reexecução.
 * **Ordem de `membros` define o schema do consolidado**: hoje `[green_trips, yellow_trips]` — o layout segue o green e `airport_fee` fica por último. Mudar a ordem muda a ordem (não o conteúdo) das colunas.
 * `passenger_count` é nulo em ~2,7% das corridas (não registrado pelos motoristas) — por isso é expectation **warn**, não drop. Agregações de média o ignoram (comportamento SQL padrão).
 * Janela de validade SLA: corridas fora de `2023-01-01` a `2023-06-01` vão para `destinos.quarentena` e permanecem na bronze — regra de `pickup_datetime` nos contratos.
@@ -133,7 +139,7 @@ Diálogo esperado: IA pergunta nome (`corridas_por_localidade` sugerido), dimens
 ```yaml
 # (item adicionado à lista `agregados` existente em src/contracts/gold/trips.yml —
 #  o agregado trips_diario permanece intocado)
-  - nome: case_ifood.gold.corridas_por_localidade
+  - nome: case_nyc_taxi.gold.corridas_por_localidade
     descricao: >
       Corridas e faturamento médio por localidade de embarque e tipo de táxi.
     agrupar_por:
